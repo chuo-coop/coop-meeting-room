@@ -53,7 +53,8 @@ def parse_time(tstr: str) -> time:
     return time(h, m)
 
 def register_reservation(room, date, start, end, user, purpose, extension):
-    new_res = {"date": date, "start": start, "end": end, "user": user, "purpose": purpose, "extension": extension}
+    new_res = {"date": date, "start": start, "end": end,
+               "user": user, "purpose": purpose, "extension": extension}
 
     # 全体利用チェック
     if room == "全体利用":
@@ -85,12 +86,46 @@ def register_reservation(room, date, start, end, user, purpose, extension):
     )
     if overlap_found:
         st.session_state["reservations"]["全体利用"].append(new_res.copy())
+
     return True
 
+# -------------------------------------------------------------
+# 全体連動キャンセル対応版
+# -------------------------------------------------------------
 def cancel_reservation(room, user, start, end, date):
-    for rlist in st.session_state["reservations"].values():
-        rlist[:] = [r for r in rlist if not (
-            r["user"] == user and r["start"] == start and r["end"] == end and r["date"] == date)]
+    # ---- 全体利用キャンセルなら3区画削除 ----
+    if room == "全体利用":
+        for target in ["全体利用", "前方区画", "後方区画"]:
+            st.session_state["reservations"][target][:] = [
+                r for r in st.session_state["reservations"][target]
+                if not (r["user"] == user and r["start"] == start and r["end"] == end and r["date"] == date)
+            ]
+        st.success("全体利用を取り消しました。")
+        st.experimental_rerun()
+        return
+
+    # ---- 半面キャンセル時：全体との整合を取る ----
+    other = "後方区画" if room == "前方区画" else "前方区画"
+
+    # 自区画削除
+    st.session_state["reservations"][room][:] = [
+        r for r in st.session_state["reservations"][room]
+        if not (r["user"] == user and r["start"] == start and r["end"] == end and r["date"] == date)
+    ]
+
+    # 他区画が残っているか確認
+    both_used = any(
+        (r["date"] == date and r["start"] == start and r["end"] == end)
+        for r in st.session_state["reservations"][other]
+    )
+
+    # 両方消えたら全体予約も削除
+    if not both_used:
+        st.session_state["reservations"]["全体利用"][:] = [
+            r for r in st.session_state["reservations"]["全体利用"]
+            if not (r["start"] == start and r["end"] == end and r["date"] == date)
+        ]
+
     st.success("予約を取り消しました。")
     st.experimental_rerun()
 
@@ -108,7 +143,7 @@ if st.session_state["page"] == "calendar":
         st.experimental_rerun()
 
 # -------------------------------------------------------------
-# 日別表示（登録・取消含む）
+# 日別表示
 # -------------------------------------------------------------
 elif st.session_state["page"] == "day_view":
     selected_date = st.session_state["selected_date"]
@@ -139,7 +174,7 @@ elif st.session_state["page"] == "day_view":
         st.markdown(f"<div style='display:flex;gap:1px;margin-bottom:10px;overflow-x:auto;width:100%;'>{''.join(cells)}</div>", unsafe_allow_html=True)
 
     # -------------------------------------------------------------
-    # 登録フォーム（select_slider採用）
+    # 登録フォーム（select_slider対応）
     # -------------------------------------------------------------
     st.divider()
     st.subheader("📝 新しい予約を登録")
@@ -148,13 +183,10 @@ elif st.session_state["page"] == "day_view":
         c1, c2, c3, c4, c5, c6 = st.columns([1,1,1,1,2,1])
         with c1:
             room_sel = st.selectbox("区画", ROOMS)
-
-        # ✅ select_slider で時間選択（完全に動作）
         with c2:
             start_sel = st.select_slider("開始", options=TIME_SLOTS, value="12:00")
         with c3:
             end_sel = st.select_slider("終了", options=TIME_SLOTS, value="13:00")
-
         with c4:
             user = st.text_input("氏名", max_chars=16)
         with c5:
@@ -163,7 +195,6 @@ elif st.session_state["page"] == "day_view":
             extension = st.text_input("内線", placeholder="例：1234")
 
         submitted = st.form_submit_button("登録")
-
         if submitted:
             s = parse_time(start_sel)
             e = parse_time(end_sel)
@@ -190,8 +221,10 @@ elif st.session_state["page"] == "day_view":
 
     if all_res:
         df_cancel = pd.DataFrame(all_res)
-        sel = st.selectbox("削除する予約を選択",
-                           df_cancel.apply(lambda x: f"{x['room']} | {x['user']} | {x['start']}〜{x['end']}", axis=1))
+        sel = st.selectbox(
+            "削除する予約を選択",
+            df_cancel.apply(lambda x: f"{x['room']} | {x['user']} | {x['start']}〜{x['end']}", axis=1)
+        )
         if st.button("選択した予約を取り消す"):
             room, user, se = sel.split(" | ")
             start, end = se.split("〜")
@@ -203,4 +236,4 @@ elif st.session_state["page"] == "day_view":
         st.session_state["page"] = "calendar"
         st.experimental_rerun()
 
-    st.caption("中央大学生活協同組合　情報通信チーム（ver.2025.01 select_slider安定版）")
+    st.caption("中央大学生活協同組合　情報通信チーム（ver.2025.01 完全統合版）")
