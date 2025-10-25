@@ -2,8 +2,7 @@ import streamlit as st
 from datetime import datetime, timedelta, time
 import pandas as pd
 
-# ✅ ページ設定は main.py 側で行うため、ここでは set_page_config を削除
-
+# --- ページ設定（main.py 側にあるためここでは不要）
 st.markdown("## 📅 会議室予約（日表示）")
 
 ROOMS = ["前方区画", "後方区画", "全体利用"]
@@ -93,7 +92,7 @@ for room in ROOMS:
 
 st.divider()
 
-# --- 予約ブロック ---
+# --- 予約登録 ---
 st.subheader("📝 新しい予約を登録")
 with st.form("add_reservation"):
     c1, c2, c3, c4, c5, c6 = st.columns([1,1,1,1,2,1])
@@ -113,16 +112,22 @@ with st.form("add_reservation"):
     submitted = st.form_submit_button("登録")
 
     if submitted:
-        s = parse_time(start_sel)
-        e = parse_time(end_sel)
-        if e <= s:
-            st.error("終了時刻は開始より後にしてください。")
-        else:
-            if register_reservation(room_sel, selected_date, start_sel, end_sel, user, purpose, extension):
-                st.success("✅ 登録が完了しました。")
-                st.rerun()
+        try:
+            s = parse_time(start_sel)
+            e = parse_time(end_sel)
+            if e <= s:
+                st.error("終了時刻は開始より後にしてください。")
+            elif not user.strip():
+                st.warning("氏名を入力してください。")
+            else:
+                ok = register_reservation(room_sel, selected_date, start_sel, end_sel, user, purpose, extension)
+                if ok:
+                    st.success("✅ 登録が完了しました。")
+                    st.rerun()
+        except Exception as e:
+            st.error(f"⚠ 登録処理でエラーが発生しました: {e}")
 
-# --- 取り消しブロック ---
+# --- 予約取消 ---
 st.divider()
 st.subheader("🗑️ 予約を取り消す")
 all_res = []
@@ -141,7 +146,7 @@ if all_res:
 else:
     st.caption("当日の予約はありません。")
 
-# --- 当日の詳細（確認ブロック） ---
+# --- 当日詳細 ---
 st.divider()
 st.subheader("📋 当日の予約詳細")
 if all_res:
@@ -149,4 +154,4 @@ if all_res:
 else:
     st.caption("本日分の予約データはありません。")
 
-st.caption("中央大学生活協同組合　情報通信チーム（取消・内線対応版）")
+st.caption("中央大学生活協同組合　情報通信チーム（安定動作版）")
