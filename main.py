@@ -30,7 +30,7 @@ with col1:
             st.session_state["month"] = 12
         else:
             st.session_state["month"] = display_month - 1
-        st.experimental_rerun()
+        st.rerun()
 with col3:
     if st.button("次月 →"):
         if display_month == 12:
@@ -59,3 +59,4 @@ for week in cal:
 # --- フッター ---
 st.divider()
 st.caption("中央大学生活協同組合　情報通信チーム")
+
