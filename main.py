@@ -163,8 +163,10 @@ elif st.session_state["page"]=="day":
             for r in st.session_state["reservations"][room]:
                 if r["date"]==date and overlap(parse_time(r["start"]),parse_time(r["end"]),s0,e0):
                     color="#ffcccc"; break
-            cells.append(f\"<div style='flex:1;background:{color};border:1px solid #aaa;text-align:center;font-size:10px;padding:2px;'>{slot}</div>\")
-        st.markdown(f\"<div style='display:flex;gap:1px;margin-bottom:8px;'>{''.join(cells)}</div>\",unsafe_allow_html=True)
+            cells.append(
+    f"<div style='flex:1;background:{color};border:1px solid #aaa;"
+    f"text-align:center;font-size:10px;padding:2px;'>{slot}</div>"
+)
 
     st.divider()
     st.subheader("📝 新規予約")
@@ -202,3 +204,4 @@ elif st.session_state["page"]=="day":
         st.session_state["page"]="calendar"; st.experimental_rerun()
 
     st.caption("中央大学生活協同組合　情報通信チーム　ver.2025.08f（確実反映＋色同期安定版）")
+
