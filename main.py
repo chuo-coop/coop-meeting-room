@@ -10,7 +10,7 @@ st.set_page_config(page_title="中大生協 会議室予約カレンダー", lay
 # --------------------------------------------------
 # 🔐 パスワード認証ブロック
 # --------------------------------------------------
-PASSWORD = "chuo2025"  # ← ここを好きなパスワードに変更可能
+PASSWORD = "chuocoop"  # ← ここを好きなパスワードに変更可能
 
 if "authenticated" not in st.session_state:
     st.session_state["authenticated"] = False
@@ -78,3 +78,4 @@ st.caption("中央大学生活協同組合　情報通信チーム（パスワ�
 if st.session_state.get("page") == "weekview":
     import pages.meeting_room_weekview
     st.stop()
+
