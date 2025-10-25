@@ -1,16 +1,22 @@
 import streamlit as st
 import pandas as pd
+import os
 from datetime import datetime, timedelta, time
+from dotenv import load_dotenv
 
 # -------------------------------------------------------------
-# ページ設定
+# 環境設定
 # -------------------------------------------------------------
+load_dotenv("env/.env")
 st.set_page_config(page_title="中大生協 会議室予約システム", layout="wide")
+
+DATA_PATH = "data/reservations.csv"
+os.makedirs("data", exist_ok=True)
 
 # -------------------------------------------------------------
 # ログイン認証
 # -------------------------------------------------------------
-PASSWORD = "coop"  # ← 必要に応じて変更可能
+PASSWORD = os.getenv("SYSTEM_PASSWORD", "coop")
 
 if "authenticated" not in st.session_state:
     st.session_state["authenticated"] = False
@@ -25,7 +31,7 @@ if not st.session_state["authenticated"]:
             st.experimental_rerun()
         else:
             st.error("パスワードが違います。")
-    st.stop()  # 認証されるまで以降のコードは実行されない
+    st.stop()
 
 # -------------------------------------------------------------
 # 初期化
@@ -33,17 +39,38 @@ if not st.session_state["authenticated"]:
 if "page" not in st.session_state:
     st.session_state["page"] = "calendar"
 
+ROOMS = ["前方区画", "後方区画", "全体利用"]
+TIME_SLOTS = [f"{h:02d}:{m:02d}" for h in range(9, 21) for m in (0, 30)]
+
 if "selected_date" not in st.session_state:
     st.session_state["selected_date"] = datetime.now().date()
 
 if "reservations" not in st.session_state:
-    st.session_state["reservations"] = {r: [] for r in ["前方区画", "後方区画", "全体利用"]}
-
-ROOMS = ["前方区画", "後方区画", "全体利用"]
-TIME_SLOTS = [f"{h:02d}:{m:02d}" for h in range(9, 21) for m in (0, 30)]
+    st.session_state["reservations"] = {r: [] for r in ROOMS}
 
 # -------------------------------------------------------------
-# 関数定義
+# 保存・読み込み関数
+# -------------------------------------------------------------
+def save_reservations():
+    all_res = []
+    for room, items in st.session_state["reservations"].items():
+        for it in items:
+            all_res.append({"room": room, **it})
+    pd.DataFrame(all_res).to_csv(DATA_PATH, index=False)
+
+def load_reservations():
+    if os.path.exists(DATA_PATH):
+        df_saved = pd.read_csv(DATA_PATH)
+        for _, row in df_saved.iterrows():
+            r = row.to_dict()
+            room = r.pop("room")
+            if room in st.session_state["reservations"]:
+                st.session_state["reservations"][room].append(r)
+
+load_reservations()
+
+# -------------------------------------------------------------
+# 基本関数
 # -------------------------------------------------------------
 def overlap(start1, end1, start2, end2):
     return start1 < end2 and start2 < end1
@@ -53,23 +80,27 @@ def parse_time(tstr: str) -> time:
     return time(h, m)
 
 def register_reservation(room, date, start, end, user, purpose, extension):
-    new_res = {"date": date, "start": start, "end": end, "user": user, "purpose": purpose, "extension": extension}
+    new_res = {"date": date, "start": start, "end": end,
+               "user": user, "purpose": purpose, "extension": extension}
 
     # 全体利用チェック
     if room == "全体利用":
         for rname in ["前方区画", "後方区画"]:
             for r in st.session_state["reservations"][rname]:
-                if (r["date"] == date) and overlap(parse_time(r["start"]), parse_time(r["end"]), parse_time(start), parse_time(end)):
+                if (r["date"] == date) and overlap(parse_time(r["start"]), parse_time(r["end"]),
+                                                  parse_time(start), parse_time(end)):
                     st.warning(f"{rname} に既に予約があります。全体利用はできません。")
                     return False
         st.session_state["reservations"][room].append(new_res)
         for rname in ["前方区画", "後方区画"]:
             st.session_state["reservations"][rname].append(new_res.copy())
+        save_reservations()
         return True
 
     # 半面予約時：全体利用と衝突チェック
     for r in st.session_state["reservations"]["全体利用"]:
-        if (r["date"] == date) and overlap(parse_time(r["start"]), parse_time(r["end"]), parse_time(start), parse_time(end)):
+        if (r["date"] == date) and overlap(parse_time(r["start"]), parse_time(r["end"]),
+                                           parse_time(start), parse_time(end)):
             st.warning("この時間帯は全体利用で予約済みです。")
             return False
 
@@ -83,11 +114,15 @@ def register_reservation(room, date, start, end, user, purpose, extension):
     )
     if overlap_found:
         st.session_state["reservations"]["全体利用"].append(new_res.copy())
+
+    save_reservations()
     return True
 
 def cancel_reservation(room, user, start, end, date):
     for rlist in st.session_state["reservations"].values():
-        rlist[:] = [r for r in rlist if not (r["user"] == user and r["start"] == start and r["end"] == end and r["date"] == date)]
+        rlist[:] = [r for r in rlist if not (
+            r["user"] == user and r["start"] == start and r["end"] == end and r["date"] == date)]
+    save_reservations()
     st.success("予約を取り消しました。")
     st.experimental_rerun()
 
@@ -96,6 +131,7 @@ def cancel_reservation(room, user, start, end, date):
 # -------------------------------------------------------------
 if st.session_state["page"] == "calendar":
     st.title("📅 会議室カレンダー")
+    st.caption("利用希望日を選んでください。詳細画面で予約登録ができます。")
 
     selected = st.date_input("日付を選択", st.session_state["selected_date"])
     st.session_state["selected_date"] = selected
@@ -121,74 +157,4 @@ elif st.session_state["page"] == "day_view":
 
     # スケジュール表
     for room in ROOMS:
-        st.markdown(f"### 🏢 {room}")
-        res_list = st.session_state["reservations"][room]
-        cells = []
-        for slot in TIME_SLOTS:
-            s0 = parse_time(slot)
-            e0 = (datetime.combine(datetime.today(), s0) + timedelta(minutes=30)).time()
-            color = "#ccffcc"
-            for r in res_list:
-                if (r["date"] == selected_date) and overlap(parse_time(r["start"]), parse_time(r["end"]), s0, e0):
-                    color = "#ffcccc"
-                    break
-            cells.append(f"<div style='flex:1;background:{color};border:1px solid #aaa;font-size:10px;text-align:center;padding:3px;'>{slot}</div>")
-        st.markdown(f"<div style='display:flex;gap:1px;margin-bottom:10px;'>{''.join(cells)}</div>", unsafe_allow_html=True)
-
-    # 登録ブロック
-    st.divider()
-    st.subheader("📝 新しい予約を登録")
-
-    with st.form("add_reservation"):
-        c1, c2, c3, c4, c5, c6 = st.columns([1,1,1,1,2,1])
-        with c1:
-            room_sel = st.selectbox("区画", ROOMS)
-        with c2:
-            start_sel = st.selectbox("開始", TIME_SLOTS)
-        with c3:
-            end_sel = st.selectbox("終了", TIME_SLOTS)
-        with c4:
-            user = st.text_input("氏名", max_chars=16)
-        with c5:
-            purpose = st.text_input("目的", placeholder="任意")
-        with c6:
-            extension = st.text_input("内線", placeholder="例：1234")
-
-        submitted = st.form_submit_button("登録")
-
-        if submitted:
-            s = parse_time(start_sel)
-            e = parse_time(end_sel)
-            if e <= s:
-                st.error("終了時刻は開始より後にしてください。")
-            else:
-                if register_reservation(room_sel, selected_date, start_sel, end_sel, user, purpose, extension):
-                    st.success("登録が完了しました。")
-                    st.experimental_rerun()
-
-    # 取消ブロック
-    st.divider()
-    st.subheader("🗑️ 予約を取り消す")
-
-    all_res = []
-    for rname, items in st.session_state["reservations"].items():
-        for it in items:
-            if it["date"] == selected_date:
-                all_res.append({"room": rname, **it})
-
-    if all_res:
-        df_cancel = pd.DataFrame(all_res)
-        sel = st.selectbox("削除する予約を選択", df_cancel.apply(lambda x: f"{x['room']} | {x['user']} | {x['start']}〜{x['end']}", axis=1))
-        if st.button("選択した予約を取り消す"):
-            room, user, se = sel.split(" | ")
-            start, end = se.split("〜")
-            cancel_reservation(room, user, start, end, selected_date)
-    else:
-        st.caption("当日の予約はありません。")
-
-    # 戻るボタン
-    if st.button("⬅ カレンダーへ戻る"):
-        st.session_state["page"] = "calendar"
-        st.experimental_rerun()
-
-    st.caption("中央大学生活協同組合　情報通信チーム（統合＋ログイン版）")
+        st.markdown(f"### 🏢 {room}
