@@ -157,4 +157,81 @@ elif st.session_state["page"] == "day_view":
 
     # スケジュール表
     for room in ROOMS:
-        st.markdown(f"### 🏢 {room}
+        st.markdown(f"### 🏢 {room}")
+        res_list = st.session_state["reservations"][room]
+        cells = []
+        for slot in TIME_SLOTS:
+            s0 = parse_time(slot)
+            e0 = (datetime.combine(datetime.today(), s0) + timedelta(minutes=30)).time()
+            color = "#ccffcc"
+            for r in res_list:
+                if (r["date"] == selected_date) and overlap(parse_time(r["start"]), parse_time(r["end"]), s0, e0):
+                    color = "#ffcccc"
+                    break
+            cells.append(
+                f"<div style='flex:1;background:{color};border:1px solid #aaa;font-size:10px;text-align:center;padding:3px;'>{slot}</div>"
+            )
+        st.markdown(f"<div style='display:flex;gap:1px;margin-bottom:10px;'>{''.join(cells)}</div>", unsafe_allow_html=True)
+
+    # 登録フォーム
+    st.divider()
+    st.subheader("📝 新しい予約を登録")
+
+    with st.form("add_reservation"):
+        c1, c2, c3, c4, c5, c6 = st.columns([1, 1, 1, 1, 2, 1])
+        with c1:
+            room_sel = st.selectbox("区画", ROOMS)
+        with c2:
+            start_index = TIME_SLOTS.index("12:00") if "12:00" in TIME_SLOTS else 0
+            start_sel = st.selectbox("開始", TIME_SLOTS, index=start_index)
+        with c3:
+            end_index = TIME_SLOTS.index("13:00") if "13:00" in TIME_SLOTS else start_index + 2
+            end_sel = st.selectbox("終了", TIME_SLOTS, index=end_index)
+        with c4:
+            user = st.text_input("氏名", max_chars=16)
+        with c5:
+            purpose = st.text_input("目的", placeholder="任意")
+        with c6:
+            extension = st.text_input("内線", placeholder="例：1234")
+
+        submitted = st.form_submit_button("登録")
+
+        if submitted:
+            s = parse_time(start_sel)
+            e = parse_time(end_sel)
+            if e <= s:
+                st.error("終了時刻は開始より後にしてください。")
+            elif not user.strip():
+                st.warning("氏名を入力してください。")
+            else:
+                if register_reservation(room_sel, selected_date, start_sel, end_sel, user, purpose, extension):
+                    st.success("登録が完了しました。")
+                    st.experimental_rerun()
+
+    # 取消ブロック
+    st.divider()
+    st.subheader("🗑️ 予約を取り消す")
+
+    all_res = []
+    for rname, items in st.session_state["reservations"].items():
+        for it in items:
+            if it["date"] == selected_date:
+                all_res.append({"room": rname, **it})
+
+    if all_res:
+        df_cancel = pd.DataFrame(all_res)
+        sel = st.selectbox("削除する予約を選択",
+                           df_cancel.apply(lambda x: f"{x['room']} | {x['user']} | {x['start']}〜{x['end']}", axis=1))
+        if st.button("選択した予約を取り消す"):
+            room, user, se = sel.split(" | ")
+            start, end = se.split("〜")
+            cancel_reservation(room, user, start, end, selected_date)
+    else:
+        st.caption("当日の予約はありません。")
+
+    # 戻るボタン
+    if st.button("⬅ カレンダーへ戻る"):
+        st.session_state["page"] = "calendar"
+        st.experimental_rerun()
+
+    st.caption("中央大学生活協同組合　情報通信チーム　ver.2025.01（安定稼働版）")
