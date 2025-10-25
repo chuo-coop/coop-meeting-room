@@ -119,7 +119,7 @@ elif st.session_state["page"] == "day_view":
       <div><span style='display:inline-block;width:18px;height:18px;background:#ccffcc;border:1px solid #999;'></span>空室</div>
       <div><span style='display:inline-block;width:18px;height:18px;background:#ffcccc;border:1px solid #999;'></span>予約済</div>
     </div>
-    \"\"\", unsafe_allow_html=True)
+    """, unsafe_allow_html=True)
 
     # スケジュール表
     for room in ROOMS:
@@ -194,4 +194,5 @@ elif st.session_state["page"] == "day_view":
         st.experimental_rerun()
 
     st.caption(\"中央大学生活協同組合　情報通信チーム（統合＋ログイン版）\")
+
 
