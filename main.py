@@ -69,7 +69,8 @@ for week in cal:
             if btn:
                 st.session_state["selected_date"] = date(display_year, display_month, day)
                 # 🔽 ページ遷移：自動ページ機能に対応
-                st.switch_page("pages/meeting_room_weekview")
+                st.switch_page("meeting_room_weekview")
 
 st.divider()
 st.caption("中央大学生活協同組合　情報通信チーム（遷移修正版）")
+
