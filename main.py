@@ -123,7 +123,7 @@ elif st.session_state["page"] == "day_view":
 
     # スケジュール表
     for room in ROOMS:
-        st.markdown(f\"### 🏢 {room}\")
+        st.markdown(f"### 🏢 {room}")
         res_list = st.session_state["reservations"][room]
         cells = []
         for slot in TIME_SLOTS:
@@ -194,5 +194,6 @@ elif st.session_state["page"] == "day_view":
         st.experimental_rerun()
 
     st.caption(\"中央大学生活協同組合　情報通信チーム（統合＋ログイン版）\")
+
 
 
