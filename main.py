@@ -10,7 +10,7 @@ st.set_page_config(page_title="中大生協 会議室予約カレンダー", lay
 # --------------------------------------------------
 # 🔐 パスワード認証ブロック
 # --------------------------------------------------
-PASSWORD = "chuocoop"  # ← ここを好きなパスワードに変更可能
+PASSWORD = "coop"  # ← あなたの希望するパスワードに変更可
 
 if "authenticated" not in st.session_state:
     st.session_state["authenticated"] = False
@@ -28,7 +28,7 @@ if not st.session_state["authenticated"]:
     st.stop()
 
 # --------------------------------------------------
-# 📅 認証済みユーザー向け：カレンダー画面
+# 📅 カレンダー表示
 # --------------------------------------------------
 st.markdown("## 🗓️ 会議室利用カレンダー")
 
@@ -68,14 +68,8 @@ for week in cal:
             btn = cols[i].button(str(day))
             if btn:
                 st.session_state["selected_date"] = date(display_year, display_month, day)
-                st.session_state["page"] = "weekview"
-                st.rerun()
+                # 🔽 ページ遷移：自動ページ機能に対応
+                st.switch_page("pages/meeting_room_weekview")
 
 st.divider()
-st.caption("中央大学生活協同組合　情報通信チーム（パスワード認証対応版）")
-
-# ページ遷移制御
-if st.session_state.get("page") == "weekview":
-    import pages.meeting_room_weekview
-    st.stop()
-
+st.caption("中央大学生活協同組合　情報通信チーム（遷移修正版）")
