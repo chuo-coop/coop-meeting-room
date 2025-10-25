@@ -125,7 +125,7 @@ elif st.session_state["page"] == "day_view":
         st.markdown(f"<div style='display:flex;gap:1px;margin-bottom:10px;'>{''.join(cells)}</div>", unsafe_allow_html=True)
 
     # -------------------------------------------------------------
-    # 📝 シンプル登録ブロック（整合性あり／制御最小）
+    # 📝 新しい予約を登録（整合性あり／シンプルUI）
     # -------------------------------------------------------------
     st.divider()
     st.subheader("📝 新しい予約を登録")
@@ -152,6 +152,7 @@ elif st.session_state["page"] == "day_view":
         else:
             if register_reservation(room_sel, selected_date, start_sel, end_sel, user, purpose, extension):
                 st.success("登録が完了しました。")
+                st.experimental_rerun()  # ← これが即反映のポイント
 
     # -------------------------------------------------------------
     # 🗑️ 予約取消ブロック
@@ -180,4 +181,4 @@ elif st.session_state["page"] == "day_view":
         st.session_state["page"] = "calendar"
         st.experimental_rerun()
 
-    st.caption("中央大学生活協同組合　情報通信チーム（シンプル版UI）")
+    st.caption("中央大学生活協同組合　情報通信チーム（1クリック反映版）")
