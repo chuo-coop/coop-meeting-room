@@ -2,9 +2,9 @@ import streamlit as st
 import calendar
 from datetime import date, datetime
 
-st.set_page_config(page_title="中大生協 会議室予約カレンダー", layout="wide")
+st.set_page_config(page_title="中大生協 会議室カレンダー", layout="wide")
 
-# --- パスワード認証 ---
+# --- ログイン認証 ---
 PASSWORD = "coop"
 
 if "authenticated" not in st.session_state:
@@ -12,9 +12,9 @@ if "authenticated" not in st.session_state:
 
 if not st.session_state["authenticated"]:
     st.title("🔐 会議室予約システム ログイン")
-    pw_input = st.text_input("パスワードを入力してください", type="password")
+    pw = st.text_input("パスワードを入力してください", type="password")
     if st.button("ログイン"):
-        if pw_input == PASSWORD:
+        if pw == PASSWORD:
             st.session_state["authenticated"] = True
             st.success("ログインしました。")
             st.rerun()
@@ -23,7 +23,7 @@ if not st.session_state["authenticated"]:
     st.stop()
 
 # --- カレンダー表示 ---
-st.markdown("## 📅 会議室利用カレンダー")
+st.title("📅 会議室利用カレンダー")
 
 today = datetime.now()
 year = today.year
@@ -41,8 +41,7 @@ for week in cal:
         else:
             if cols[i].button(str(day)):
                 st.session_state["selected_date"] = date(year, month, day)
-                # ✅ ページ遷移（この1行が重要）
-                st.switch_page("meeting_room_weekview")
+                # ✅ 絵文字なし・pagesも書かない
+                st.switch_page("1_meeting_room_weekview")
 
-st.caption("中央大学生活協同組合　会議室予約システム（安定版）")
-
+st.caption("中央大学生活協同組合　情報通信チーム")
