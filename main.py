@@ -232,4 +232,4 @@ elif st.session_state["page"] == "day_view":
         st.session_state["page"] = "calendar"
         st.experimental_rerun()
 
-    st.caption("中央大学
+    st.caption("中央大学生活協同組合　情報通信チーム　ver.2025.08d（統合安定＋型整合完全版）")
