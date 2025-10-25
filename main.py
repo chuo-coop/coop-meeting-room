@@ -143,25 +143,20 @@ elif st.session_state["page"] == "day_view":
     st.subheader("📝 新しい予約を登録")
 
     with st.form("add_reservation"):
-        c1, c2, c3, c4, c5, c6 = st.columns([1, 1, 1, 1, 2, 1])
+        c1, c2, c3, c4, c5, c6 = st.columns([1,1,1,1,2,1])
         with c1:
             room_sel = st.selectbox("区画", ROOMS)
 
-        # ✅ 初期値12:00/13:00＋ユーザー操作可能
+        # ✅ 初回のみ12:00〜13:00を設定、以後ユーザー操作を反映
+        if "start_sel" not in st.session_state:
+            st.session_state["start_sel"] = "12:00"
+        if "end_sel" not in st.session_state:
+            st.session_state["end_sel"] = "13:00"
+
         with c2:
-            start_sel = st.selectbox(
-                "開始",
-                TIME_SLOTS,
-                key="start_sel",
-                index=TIME_SLOTS.index("12:00") if "start_sel" not in st.session_state else TIME_SLOTS.index(st.session_state["start_sel"])
-            )
+            start_sel = st.selectbox("開始", TIME_SLOTS, key="start_sel")
         with c3:
-            end_sel = st.selectbox(
-                "終了",
-                TIME_SLOTS,
-                key="end_sel",
-                index=TIME_SLOTS.index("13:00") if "end_sel" not in st.session_state else TIME_SLOTS.index(st.session_state["end_sel"])
-            )
+            end_sel = st.selectbox("終了", TIME_SLOTS, key="end_sel")
 
         with c4:
             user = st.text_input("氏名", max_chars=16)
@@ -210,4 +205,4 @@ elif st.session_state["page"] == "day_view":
         st.session_state["page"] = "calendar"
         st.experimental_rerun()
 
-    st.caption("中央大学生活協同組合　情報通信チーム（12:00初期＋選択可版）")
+    st.caption("中央大学生活協同組合　情報通信チーム（12:00初期＋ドロップダウン正常動作版）")
