@@ -10,7 +10,7 @@ st.set_page_config(page_title="中大生協 会議室予約システム", layout
 # -------------------------------------------------------------
 # ログイン認証
 # -------------------------------------------------------------
-PASSWORD = "coop"  # ← パスワード直書き（余計な依存なし）
+PASSWORD = "coop"
 
 if "authenticated" not in st.session_state:
     st.session_state["authenticated"] = False
@@ -59,7 +59,8 @@ def register_reservation(room, date, start, end, user, purpose, extension):
     if room == "全体利用":
         for rname in ["前方区画", "後方区画"]:
             for r in st.session_state["reservations"][rname]:
-                if (r["date"] == date) and overlap(parse_time(r["start"]), parse_time(r["end"]), parse_time(start), parse_time(end)):
+                if (r["date"] == date) and overlap(parse_time(r["start"]), parse_time(r["end"]),
+                                                  parse_time(start), parse_time(end)):
                     st.warning(f"{rname} に既に予約があります。全体利用はできません。")
                     return False
         st.session_state["reservations"][room].append(new_res)
@@ -69,7 +70,8 @@ def register_reservation(room, date, start, end, user, purpose, extension):
 
     # 半面予約時：全体利用と衝突チェック
     for r in st.session_state["reservations"]["全体利用"]:
-        if (r["date"] == date) and overlap(parse_time(r["start"]), parse_time(r["end"]), parse_time(start), parse_time(end)):
+        if (r["date"] == date) and overlap(parse_time(r["start"]), parse_time(r["end"]),
+                                           parse_time(start), parse_time(end)):
             st.warning("この時間帯は全体利用で予約済みです。")
             return False
 
@@ -87,7 +89,8 @@ def register_reservation(room, date, start, end, user, purpose, extension):
 
 def cancel_reservation(room, user, start, end, date):
     for rlist in st.session_state["reservations"].values():
-        rlist[:] = [r for r in rlist if not (r["user"] == user and r["start"] == start and r["end"] == end and r["date"] == date)]
+        rlist[:] = [r for r in rlist if not (
+            r["user"] == user and r["start"] == start and r["end"] == end and r["date"] == date)]
     st.success("予約を取り消しました。")
     st.experimental_rerun()
 
@@ -133,20 +136,33 @@ elif st.session_state["page"] == "day_view":
                     color = "#ffcccc"
                     break
             cells.append(f"<div style='flex:1;background:{color};border:1px solid #aaa;font-size:10px;text-align:center;padding:3px;'>{slot}</div>")
-        st.markdown(f"<div style='display:flex;gap:1px;margin-bottom:10px;'>{''.join(cells)}</div>", unsafe_allow_html=True)
+        st.markdown(f"<div style='display:flex;gap:1px;margin-bottom:10px;overflow-x:auto;width:100%;'>{''.join(cells)}</div>", unsafe_allow_html=True)
 
-    # 登録ブロック
+    # 登録フォーム
     st.divider()
     st.subheader("📝 新しい予約を登録")
 
     with st.form("add_reservation"):
-        c1, c2, c3, c4, c5, c6 = st.columns([1,1,1,1,2,1])
+        c1, c2, c3, c4, c5, c6 = st.columns([1, 1, 1, 1, 2, 1])
         with c1:
             room_sel = st.selectbox("区画", ROOMS)
+
+        # ✅ 初期値12:00/13:00＋ユーザー操作可能
         with c2:
-            start_sel = st.selectbox("開始", TIME_SLOTS, index=TIME_SLOTS.index("12:00"))
+            start_sel = st.selectbox(
+                "開始",
+                TIME_SLOTS,
+                key="start_sel",
+                index=TIME_SLOTS.index("12:00") if "start_sel" not in st.session_state else TIME_SLOTS.index(st.session_state["start_sel"])
+            )
         with c3:
-            end_sel = st.selectbox("終了", TIME_SLOTS, index=TIME_SLOTS.index("13:00"))
+            end_sel = st.selectbox(
+                "終了",
+                TIME_SLOTS,
+                key="end_sel",
+                index=TIME_SLOTS.index("13:00") if "end_sel" not in st.session_state else TIME_SLOTS.index(st.session_state["end_sel"])
+            )
+
         with c4:
             user = st.text_input("氏名", max_chars=16)
         with c5:
@@ -161,6 +177,8 @@ elif st.session_state["page"] == "day_view":
             e = parse_time(end_sel)
             if e <= s:
                 st.error("終了時刻は開始より後にしてください。")
+            elif not user.strip():
+                st.warning("氏名を入力してください。")
             else:
                 if register_reservation(room_sel, selected_date, start_sel, end_sel, user, purpose, extension):
                     st.success("登録が完了しました。")
@@ -178,7 +196,8 @@ elif st.session_state["page"] == "day_view":
 
     if all_res:
         df_cancel = pd.DataFrame(all_res)
-        sel = st.selectbox("削除する予約を選択", df_cancel.apply(lambda x: f"{x['room']} | {x['user']} | {x['start']}〜{x['end']}", axis=1))
+        sel = st.selectbox("削除する予約を選択",
+                           df_cancel.apply(lambda x: f"{x['room']} | {x['user']} | {x['start']}〜{x['end']}", axis=1))
         if st.button("選択した予約を取り消す"):
             room, user, se = sel.split(" | ")
             start, end = se.split("〜")
@@ -191,4 +210,4 @@ elif st.session_state["page"] == "day_view":
         st.session_state["page"] = "calendar"
         st.experimental_rerun()
 
-    st.caption("中央大学生活協同組合　情報通信チーム（12:00初期設定版）")
+    st.caption("中央大学生活協同組合　情報通信チーム（12:00初期＋選択可版）")
