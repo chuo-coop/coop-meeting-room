@@ -53,13 +53,39 @@ def parse_time(tstr: str) -> time:
     return time(h, m)
 
 # -------------------------------------------------------------
-# 予約登録ロジック（時間完全一致で全体化）
+# 整合チェック（全体↔半面）
+# -------------------------------------------------------------
+def sync_full_room(date):
+    """全体利用データを前方・後方の状態から再構築"""
+    all_new = []
+    front = st.session_state["reservations"]["前方区画"]
+    back = st.session_state["reservations"]["後方区画"]
+
+    for f in front:
+        for b in back:
+            if (
+                f["date"] == date == b["date"]
+                and f["start"] == b["start"]
+                and f["end"] == b["end"]
+            ):
+                # 重複登録を防止
+                if not any(
+                    r["date"] == date and r["start"] == f["start"] and r["end"] == f["end"]
+                    for r in all_new
+                ):
+                    all_new.append(f.copy())
+
+    # 差分更新
+    st.session_state["reservations"]["全体利用"] = all_new
+
+# -------------------------------------------------------------
+# 登録処理
 # -------------------------------------------------------------
 def register_reservation(room, date, start, end, user, purpose, extension):
     new_res = {"date": date, "start": start, "end": end,
                "user": user, "purpose": purpose, "extension": extension}
 
-    # 全体利用チェック
+    # 全体利用
     if room == "全体利用":
         for rname in ["前方区画", "後方区画"]:
             for r in st.session_state["reservations"][rname]:
@@ -67,70 +93,47 @@ def register_reservation(room, date, start, end, user, purpose, extension):
                                                   parse_time(start), parse_time(end)):
                     st.warning(f"{rname} に既に予約があります。全体利用はできません。")
                     return False
-        st.session_state["reservations"][room].append(new_res)
-        for rname in ["前方区画", "後方区画"]:
+        for rname in ["前方区画", "後方区画", "全体利用"]:
             st.session_state["reservations"][rname].append(new_res.copy())
         return True
 
-    # 半面予約時：全体利用との衝突防止
+    # 半面：全体利用との重複確認
     for r in st.session_state["reservations"]["全体利用"]:
         if (r["date"] == date) and overlap(parse_time(r["start"]), parse_time(r["end"]),
                                            parse_time(start), parse_time(end)):
             st.warning("この時間帯は全体利用で予約済みです。")
             return False
 
-    # 半面登録
     st.session_state["reservations"][room].append(new_res)
 
-    # 🔽 修正版：もう一方の区画と時間が「完全一致」した場合のみ全体化
-    other = "後方区画" if room == "前方区画" else "前方区画"
-    match_found = any(
-        (r["date"] == date)
-        and (r["start"] == start)
-        and (r["end"] == end)
-        for r in st.session_state["reservations"][other]
-    )
-    if match_found:
-        st.session_state["reservations"]["全体利用"].append(new_res.copy())
+    # 登録後、全体整合チェック
+    sync_full_room(date)
 
     return True
 
 # -------------------------------------------------------------
-# 予約取消ロジック（全体連動）
+# 取消処理
 # -------------------------------------------------------------
 def cancel_reservation(room, user, start, end, date):
-    # ---- 全体利用キャンセルなら3区画削除 ----
+    # 全体取消
     if room == "全体利用":
-        for target in ["全体利用", "前方区画", "後方区画"]:
-            st.session_state["reservations"][target][:] = [
-                r for r in st.session_state["reservations"][target]
+        for rname in ["前方区画", "後方区画", "全体利用"]:
+            st.session_state["reservations"][rname][:] = [
+                r for r in st.session_state["reservations"][rname]
                 if not (r["user"] == user and r["start"] == start and r["end"] == end and r["date"] == date)
             ]
         st.success("全体利用を取り消しました。")
         st.experimental_rerun()
         return
 
-    # ---- 半面キャンセル時：全体との整合を取る ----
-    other = "後方区画" if room == "前方区画" else "前方区画"
-
-    # 自区画削除
+    # 半面取消
     st.session_state["reservations"][room][:] = [
         r for r in st.session_state["reservations"][room]
         if not (r["user"] == user and r["start"] == start and r["end"] == end and r["date"] == date)
     ]
 
-    # 他区画が同一時間で残っているか確認
-    both_used = any(
-        (r["date"] == date and r["start"] == start and r["end"] == end)
-        for r in st.session_state["reservations"][other]
-    )
-
-    # 両方消えたら全体予約も削除
-    if not both_used:
-        st.session_state["reservations"]["全体利用"][:] = [
-            r for r in st.session_state["reservations"]["全体利用"]
-            if not (r["start"] == start and r["end"] == end and r["date"] == date)
-        ]
+    # 整合再計算
+    sync_full_room(date)
 
     st.success("予約を取り消しました。")
     st.experimental_rerun()
@@ -155,7 +158,6 @@ elif st.session_state["page"] == "day_view":
     selected_date = st.session_state["selected_date"]
     st.markdown(f"## 🗓️ {selected_date} の利用状況")
 
-    # 凡例
     st.markdown("""
     <div style='display:flex;gap:24px;align-items:center;margin:6px 0 14px 2px;font-size:14px;'>
       <div><span style='display:inline-block;width:18px;height:18px;background:#ccffcc;border:1px solid #999;'></span>空室</div>
@@ -163,7 +165,6 @@ elif st.session_state["page"] == "day_view":
     </div>
     """, unsafe_allow_html=True)
 
-    # スケジュール表
     for room in ROOMS:
         st.markdown(f"### 🏢 {room}")
         res_list = st.session_state["reservations"][room]
@@ -176,15 +177,14 @@ elif st.session_state["page"] == "day_view":
                 if (r["date"] == selected_date) and overlap(parse_time(r["start"]), parse_time(r["end"]), s0, e0):
                     color = "#ffcccc"
                     break
-            cells.append(f"<div style='flex:1;background:{color};border:1px solid #aaa;font-size:10px;text-align:center;padding:3px;'>{slot}</div>")
+            cells.append(
+                f"<div style='flex:1;background:{color};border:1px solid #aaa;font-size:10px;text-align:center;padding:3px;'>{slot}</div>"
+            )
         st.markdown(f"<div style='display:flex;gap:1px;margin-bottom:10px;overflow-x:auto;width:100%;'>{''.join(cells)}</div>", unsafe_allow_html=True)
 
-    # -------------------------------------------------------------
-    # 登録フォーム（select_slider対応）
-    # -------------------------------------------------------------
+    # 登録フォーム
     st.divider()
     st.subheader("📝 新しい予約を登録")
-
     with st.form("add_reservation"):
         c1, c2, c3, c4, c5, c6 = st.columns([1,1,1,1,2,1])
         with c1:
@@ -213,9 +213,7 @@ elif st.session_state["page"] == "day_view":
                     st.success("登録が完了しました。")
                     st.experimental_rerun()
 
-    # -------------------------------------------------------------
-    # 取消ブロック
-    # -------------------------------------------------------------
+    # 取消
     st.divider()
     st.subheader("🗑️ 予約を取り消す")
 
@@ -242,4 +240,4 @@ elif st.session_state["page"] == "day_view":
         st.session_state["page"] = "calendar"
         st.experimental_rerun()
 
-    st.caption("中央大学生活協同組合　情報通信チーム（ver.2025.02：完全安定統合版）")
+    st.caption("中央大学生活協同組合　情報通信チーム（ver.2025.03：整合完全版）")
