@@ -1,4 +1,5 @@
 import streamlit as st
+st.set_page_config(page_title="中大生協 会議室予約（日表示）", layout="wide")
 from datetime import datetime, timedelta, time
 import pandas as pd
 
@@ -155,4 +156,5 @@ else:
     st.caption("本日分の予約データはありません。")
 
 st.caption("中央大学生活協同組合　情報通信チーム（安定動作版）")
+
 
