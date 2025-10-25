@@ -52,6 +52,9 @@ def parse_time(tstr: str) -> time:
     h, m = map(int, tstr.split(":"))
     return time(h, m)
 
+# -------------------------------------------------------------
+# 予約登録ロジック（時間完全一致で全体化）
+# -------------------------------------------------------------
 def register_reservation(room, date, start, end, user, purpose, extension):
     new_res = {"date": date, "start": start, "end": end,
                "user": user, "purpose": purpose, "extension": extension}
@@ -69,7 +72,7 @@ def register_reservation(room, date, start, end, user, purpose, extension):
             st.session_state["reservations"][rname].append(new_res.copy())
         return True
 
-    # 半面予約時：全体利用と衝突チェック
+    # 半面予約時：全体利用との衝突防止
     for r in st.session_state["reservations"]["全体利用"]:
         if (r["date"] == date) and overlap(parse_time(r["start"]), parse_time(r["end"]),
                                            parse_time(start), parse_time(end)):
@@ -78,19 +81,22 @@ def register_reservation(room, date, start, end, user, purpose, extension):
 
     # 半面登録
     st.session_state["reservations"][room].append(new_res)
+
+    # 🔽 修正版：もう一方の区画と時間が「完全一致」した場合のみ全体化
     other = "後方区画" if room == "前方区画" else "前方区画"
-    overlap_found = any(
+    match_found = any(
         (r["date"] == date)
-        and overlap(parse_time(r["start"]), parse_time(r["end"]), parse_time(start), parse_time(end))
+        and (r["start"] == start)
+        and (r["end"] == end)
         for r in st.session_state["reservations"][other]
     )
-    if overlap_found:
+    if match_found:
         st.session_state["reservations"]["全体利用"].append(new_res.copy())
 
     return True
 
 # -------------------------------------------------------------
-# 全体連動キャンセル対応版
+# 予約取消ロジック（全体連動）
 # -------------------------------------------------------------
 def cancel_reservation(room, user, start, end, date):
     # ---- 全体利用キャンセルなら3区画削除 ----
@@ -113,7 +119,7 @@ def cancel_reservation(room, user, start, end, date):
         if not (r["user"] == user and r["start"] == start and r["end"] == end and r["date"] == date)
     ]
 
-    # 他区画が残っているか確認
+    # 他区画が同一時間で残っているか確認
     both_used = any(
         (r["date"] == date and r["start"] == start and r["end"] == end)
         for r in st.session_state["reservations"][other]
@@ -236,4 +242,4 @@ elif st.session_state["page"] == "day_view":
         st.session_state["page"] = "calendar"
         st.experimental_rerun()
 
-    st.caption("中央大学生活協同組合　情報通信チーム（ver.2025.01 完全統合版）")
+    st.caption("中央大学生活協同組合　情報通信チーム（ver.2025.02：完全安定統合版）")
