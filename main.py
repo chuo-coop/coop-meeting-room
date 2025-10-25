@@ -64,4 +64,4 @@ for week in cal:
             btn = cols[i].button(str(day))
             if btn:
                 st.session_state["selected_date"] = date(display_year, display_month, day)
-                st.switch_page("meeting_room_weekview.py")
+                st.switch_page("meeting_room_weekview")
