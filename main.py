@@ -1,5 +1,4 @@
 import streamlit as st
-import pandas as pd
 from datetime import datetime, timedelta, time
 
 # -------------------------------------------------------------
@@ -52,56 +51,14 @@ def parse_time(tstr: str) -> time:
     h, m = map(int, tstr.split(":"))
     return time(h, m)
 
-def register_reservation(room, date, start, end, user, purpose, extension):
-    new_res = {
-        "date": date,
-        "start": start,
-        "end": end,
-        "user": user,
-        "purpose": purpose,
-        "extension": extension,
-        "status": "active",
-        "cancelled_by": None,
-    }
-
-    # 競合チェック
+def register_reservation(room, date, start, end, user):
+    new_res = {"date": date, "start": start, "end": end, "user": user}
     for r in st.session_state["reservations"][room]:
-        if (r["date"] == date) and (r["status"] == "active") and overlap(parse_time(r["start"]), parse_time(r["end"]), parse_time(start), parse_time(end)):
+        if (r["date"] == date) and overlap(parse_time(r["start"]), parse_time(r["end"]), parse_time(start), parse_time(end)):
             st.warning(f"{room} のこの時間帯はすでに予約があります。")
             return False
-
     st.session_state["reservations"][room].append(new_res)
     return True
-
-def cancel_reservation(room, user, start, end, date, cancelled_by):
-    for r in st.session_state["reservations"][room]:
-        if (
-            r["user"] == user
-            and r["start"] == start
-            and r["end"] == end
-            and r["date"] == date
-            and r["status"] == "active"
-        ):
-            r["status"] = "cancelled"
-            r["cancelled_by"] = cancelled_by
-            st.success("予約を取り消しました。")
-            st.experimental_rerun()
-            return
-    st.error("一致する予約が見つかりませんでした。")
-
-def is_full(selected_date):
-    """前側と奥側の両方が同時間帯で予約されている場合に「満」を返す"""
-    res_a = st.session_state["reservations"]["前側"]
-    res_b = st.session_state["reservations"]["奥側"]
-    for a in res_a:
-        if a["date"] != selected_date or a["status"] != "active":
-            continue
-        for b in res_b:
-            if b["date"] != selected_date or b["status"] != "active":
-                continue
-            if overlap(parse_time(a["start"]), parse_time(a["end"]), parse_time(b["start"]), parse_time(b["end"])):
-                return True
-    return False
 
 # -------------------------------------------------------------
 # カレンダー画面
@@ -117,46 +74,65 @@ if st.session_state["page"] == "calendar":
         st.experimental_rerun()
 
 # -------------------------------------------------------------
-# 日別表示（登録・取消含む）
+# 日別表示（30分スロット＋満インジケーター）
 # -------------------------------------------------------------
 elif st.session_state["page"] == "day_view":
     selected_date = st.session_state["selected_date"]
     st.markdown(f"## 🗓️ {selected_date} の利用状況")
 
-    # 満インジケーター
-    if is_full(selected_date):
-        st.markdown("<div style='font-size:18px;color:#d00;font-weight:bold;'>□満</div>", unsafe_allow_html=True)
-    else:
-        st.markdown("<div style='font-size:18px;color:#666;'>□空</div>", unsafe_allow_html=True)
+    st.markdown("""
+    <div style='display:flex;gap:24px;align-items:center;margin:6px 0 14px 2px;font-size:14px;'>
+      <div><span style='display:inline-block;width:18px;height:18px;background:#ccffcc;border:1px solid #999;'></span>空室</div>
+      <div><span style='display:inline-block;width:18px;height:18px;background:#ffcccc;border:1px solid #999;'></span>予約済</div>
+      <div><span style='display:inline-block;border:1px solid #000;padding:1px 4px;'>満</span> 前・奥 両方利用中</div>
+    </div>
+    """, unsafe_allow_html=True)
 
-    # 利用状況（現）
-    st.divider()
-    st.subheader("🔸 現在の利用状況")
+    # 30分スロット表示
+    st.markdown("### 🏢 利用スロット")
+    for slot in TIME_SLOTS:
+        s0 = parse_time(slot)
+        e0 = (datetime.combine(datetime.today(), s0) + timedelta(minutes=30)).time()
 
-    any_active = False
-    for room in ROOMS:
-        res_list = [r for r in st.session_state["reservations"][room] if r["date"] == selected_date]
-        if res_list:
-            st.markdown(f"### 🏢 {room}")
-            for r in sorted(res_list, key=lambda x: x["start"]):
-                text = f"{r['start']}〜{r['end']}　{r['user']}"
-                if r["purpose"]:
-                    text += f"　{r['purpose']}"
-                if r["extension"]:
-                    text += f"（内線 {r['extension']}）"
+        # 前側状態
+        front_reserved = any(
+            (r["date"] == selected_date)
+            and overlap(parse_time(r["start"]), parse_time(r["end"]), s0, e0)
+            for r in st.session_state["reservations"]["前側"]
+        )
 
-                if r["status"] == "cancelled":
-                    text = f"<span style='text-decoration:line-through;color:#777;'>{text}</span>"
-                st.markdown(text, unsafe_allow_html=True)
-                any_active = True
-    if not any_active:
-        st.caption("当日の予約はありません。")
+        # 奥側状態
+        back_reserved = any(
+            (r["date"] == selected_date)
+            and overlap(parse_time(r["start"]), parse_time(r["end"]), s0, e0)
+            for r in st.session_state["reservations"]["奥側"]
+        )
 
-    # 新規登録
+        # 背景色設定
+        front_color = "#ffcccc" if front_reserved else "#ccffcc"
+        back_color = "#ffcccc" if back_reserved else "#ccffcc"
+
+        # 満インジケーター
+        full_label = "<div style='border:1px solid #000;padding:0 6px;display:inline-block;'>満</div>" if (front_reserved and back_reserved) else ""
+
+        st.markdown(f"""
+        <div style='display:flex;align-items:center;margin-bottom:2px;'>
+          <div style='width:70px;font-size:12px;'>{slot}</div>
+          <div style='flex:1;display:flex;'>
+            <div style='flex:1;background:{front_color};border:1px solid #aaa;text-align:center;font-size:11px;'>前側</div>
+            <div style='flex:1;background:{back_color};border:1px solid #aaa;text-align:center;font-size:11px;'>奥側</div>
+            <div style='width:60px;text-align:center;font-size:11px;'>{full_label}</div>
+          </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+    # -------------------------------------------------------------
+    # 登録フォーム
+    # -------------------------------------------------------------
     st.divider()
     st.subheader("📝 新しい予約を登録")
 
-    c1, c2, c3, c4, c5, c6 = st.columns([1,1,1,1,2,1])
+    c1, c2, c3, c4 = st.columns([1, 1, 1, 1])
     with c1:
         room_sel = st.selectbox("区分", ROOMS)
     with c2:
@@ -165,10 +141,6 @@ elif st.session_state["page"] == "day_view":
         end_sel = st.selectbox("終了", TIME_SLOTS)
     with c4:
         user = st.text_input("担当者（苗字）", max_chars=16)
-    with c5:
-        purpose = st.text_input("目的（任意）", placeholder="例：打合せ")
-    with c6:
-        extension = st.text_input("内線（任意）", placeholder="例：1234")
 
     if st.button("登録"):
         s = parse_time(start_sel)
@@ -178,40 +150,12 @@ elif st.session_state["page"] == "day_view":
         elif not user:
             st.error("担当者名（苗字）は必須です。")
         else:
-            if register_reservation(room_sel, selected_date, start_sel, end_sel, user, purpose, extension):
+            if register_reservation(room_sel, selected_date, start_sel, end_sel, user):
                 st.success("登録が完了しました。")
                 st.experimental_rerun()
 
-    # 取消登録
-    st.divider()
-    st.subheader("🗑️ 予約を取り消す（履歴保持）")
-
-    all_res = []
-    for rname, items in st.session_state["reservations"].items():
-        for it in items:
-            if it["date"] == selected_date and it["status"] == "active":
-                all_res.append({"room": rname, **it})
-
-    if all_res:
-        df_cancel = pd.DataFrame(all_res)
-        sel = st.selectbox(
-            "取り消す予約を選択",
-            df_cancel.apply(lambda x: f"{x['room']} | {x['user']} | {x['start']}〜{x['end']}", axis=1),
-        )
-        cancel_by = st.text_input("取り消し担当者（苗字）", max_chars=16)
-        if st.button("取消を登録"):
-            if not cancel_by:
-                st.error("取り消し担当者の入力は必須です。")
-            else:
-                room, user, se = sel.split(" | ")
-                start, end = se.split("〜")
-                cancel_reservation(room, user, start, end, selected_date, cancel_by)
-    else:
-        st.caption("取り消し可能な予約はありません。")
-
-    # 戻るボタン
     if st.button("⬅ カレンダーへ戻る"):
         st.session_state["page"] = "calendar"
         st.experimental_rerun()
 
-    st.caption("中央大学生活協同組合　情報通信チーム（改良版：満表示＋現利用＋取消履歴）")
+    st.caption("中央大学生活協同組合　情報通信チーム（v3：30分スロット＋3行満インジケーター）")
