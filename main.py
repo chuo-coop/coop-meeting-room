@@ -57,15 +57,27 @@ def load_reservations():
         for _, row in df.iterrows():
             d = row.to_dict()
             room = d.pop("room")
+            # 日付をdatetime.dateに変換
+            if isinstance(d["date"], str):
+                try:
+                    d["date"] = datetime.strptime(d["date"], "%Y-%m-%d").date()
+                except ValueError:
+                    pass
             if room in st.session_state["reservations"]:
                 st.session_state["reservations"][room].append(d)
+
 load_reservations()
 
 # -------------------------------------------------------------
-# 基本関数
+# 共通関数
 # -------------------------------------------------------------
 def parse_time(tstr): h, m = map(int, tstr.split(":")); return time(h, m)
 def overlap(s1, e1, s2, e2): return s1 < e2 and s2 < e1
+
+def to_date(d):
+    if isinstance(d, str):
+        return datetime.strptime(d, "%Y-%m-%d").date()
+    return d
 
 # -------------------------------------------------------------
 # 整合処理（前後半面が重なる場合に全体利用を生成）
@@ -78,7 +90,7 @@ def sync_full_room(date):
     for f in front:
         for b in back:
             if (
-                f["date"] == b["date"] == date
+                to_date(f["date"]) == to_date(b["date"]) == date
                 and overlap(parse_time(f["start"]), parse_time(f["end"]),
                             parse_time(b["start"]), parse_time(b["end"]))
             ):
@@ -93,10 +105,8 @@ def sync_full_room(date):
 
     # 対象日だけ置き換え
     st.session_state["reservations"]["全体利用"] = [
-        r for r in st.session_state["reservations"]["全体利用"] if r["date"] != date
+        r for r in st.session_state["reservations"]["全体利用"] if to_date(r["date"]) != date
     ] + full_new
-
-    save_reservations()
 
 # -------------------------------------------------------------
 # 登録処理
@@ -127,6 +137,7 @@ def register_reservation(room, date, start, end, user, purpose, extension):
 
     st.session_state["reservations"][room].append(new)
     sync_full_room(date)
+    save_reservations()
     return True
 
 # -------------------------------------------------------------
@@ -140,6 +151,7 @@ def cancel_reservation(room, user, start, end, date):
                     (room == "全体利用" or rname == room))
         ]
     sync_full_room(date)
+    save_reservations()
     st.success("予約を取り消しました。")
     st.experimental_rerun()
 
@@ -220,4 +232,4 @@ elif st.session_state["page"] == "day_view":
         st.session_state["page"] = "calendar"
         st.experimental_rerun()
 
-    st.caption("中央大学生活協同組合　情報通信チーム　ver.2025.08（重複同期制御版）")
+    st.caption("中央大学
