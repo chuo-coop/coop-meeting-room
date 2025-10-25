@@ -139,7 +139,7 @@ elif st.session_state["page"] == "day_view":
         st.markdown(f"<div style='display:flex;gap:1px;margin-bottom:10px;overflow-x:auto;width:100%;'>{''.join(cells)}</div>", unsafe_allow_html=True)
 
     # -------------------------------------------------------------
-    # 登録フォーム（ここが修正版）
+    # 登録フォーム（select_slider採用）
     # -------------------------------------------------------------
     st.divider()
     st.subheader("📝 新しい予約を登録")
@@ -149,17 +149,11 @@ elif st.session_state["page"] == "day_view":
         with c1:
             room_sel = st.selectbox("区画", ROOMS)
 
-        # ✅ 初回のみデフォルト設定
-        if "start_sel" not in st.session_state:
-            st.session_state["start_sel"] = "12:00"
-        if "end_sel" not in st.session_state:
-            st.session_state["end_sel"] = "13:00"
-
-        # ✅ 完全動作するドロップダウン（index固定のみ）
+        # ✅ select_slider で時間選択（完全に動作）
         with c2:
-            start_sel = st.selectbox("開始", TIME_SLOTS, index=TIME_SLOTS.index(st.session_state["start_sel"]))
+            start_sel = st.select_slider("開始", options=TIME_SLOTS, value="12:00")
         with c3:
-            end_sel = st.selectbox("終了", TIME_SLOTS, index=TIME_SLOTS.index(st.session_state["end_sel"]))
+            end_sel = st.select_slider("終了", options=TIME_SLOTS, value="13:00")
 
         with c4:
             user = st.text_input("氏名", max_chars=16)
@@ -209,4 +203,4 @@ elif st.session_state["page"] == "day_view":
         st.session_state["page"] = "calendar"
         st.experimental_rerun()
 
-    st.caption("中央大学生活協同組合　情報通信チーム（12:00初期＋完全動作版）")
+    st.caption("中央大学生活協同組合　情報通信チーム（ver.2025.01 select_slider安定版）")
