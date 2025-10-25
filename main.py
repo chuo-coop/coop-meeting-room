@@ -42,6 +42,7 @@ for week in cal:
             if cols[i].button(str(day)):
                 st.session_state["selected_date"] = date(year, month, day)
                 # ✅ ページ遷移（この1行が重要）
-                st.switch_page("pages/meeting_room_weekview")
+                st.switch_page("meeting_room_weekview")
 
 st.caption("中央大学生活協同組合　会議室予約システム（安定版）")
+
