@@ -37,9 +37,9 @@ if "selected_date" not in st.session_state:
     st.session_state["selected_date"] = datetime.now().date()
 
 if "reservations" not in st.session_state:
-    st.session_state["reservations"] = {r: [] for r in ["前方区画", "後方区画"]}
+    st.session_state["reservations"] = {r: [] for r in ["前側", "奥側"]}
 
-ROOMS = ["前方区画", "後方区画"]
+ROOMS = ["前側", "奥側"]
 TIME_SLOTS = [f"{h:02d}:{m:02d}" for h in range(9, 21) for m in (0, 30)]
 
 # -------------------------------------------------------------
@@ -54,7 +54,6 @@ def parse_time(tstr: str) -> time:
 
 def register_reservation(room, date, start, end, user, purpose, extension):
     new_res = {"date": date, "start": start, "end": end, "user": user, "purpose": purpose, "extension": extension}
-    # 重複チェック
     for r in st.session_state["reservations"][room]:
         if (r["date"] == date) and overlap(parse_time(r["start"]), parse_time(r["end"]), parse_time(start), parse_time(end)):
             st.warning(f"{room} に既に予約があります。")
@@ -82,7 +81,7 @@ if st.session_state["page"] == "calendar":
         st.experimental_rerun()
 
 # -------------------------------------------------------------
-# 日別表示（登録・取消含む）
+# 日別表示
 # -------------------------------------------------------------
 elif st.session_state["page"] == "day_view":
     selected_date = st.session_state["selected_date"]
@@ -93,11 +92,13 @@ elif st.session_state["page"] == "day_view":
     <div style='display:flex;gap:24px;align-items:center;margin:6px 0 14px 2px;font-size:14px;'>
       <div><span style='display:inline-block;width:18px;height:18px;background:#ccffcc;border:1px solid #999;'></span>空室</div>
       <div><span style='display:inline-block;width:18px;height:18px;background:#ffcccc;border:1px solid #999;'></span>予約済</div>
-      <div><span style='display:inline-block;border:1px solid #000;padding:1px 4px;'>満</span> 前方・後方 両方利用中</div>
+      <div><span style='display:inline-block;width:18px;height:18px;background:#ff9999;border:1px solid #999;'></span>満（前側・奥側両方利用中）</div>
     </div>
     """, unsafe_allow_html=True)
 
-    # スケジュール表
+    # -------------------------------------------------------------
+    # 前側・奥側の利用状況
+    # -------------------------------------------------------------
     for room in ROOMS:
         st.markdown(f"### 🏢 {room}")
         res_list = st.session_state["reservations"][room]
@@ -110,11 +111,13 @@ elif st.session_state["page"] == "day_view":
                 if (r["date"] == selected_date) and overlap(parse_time(r["start"]), parse_time(r["end"]), s0, e0):
                     color = "#ffcccc"
                     break
-            cells.append(f"<div style='flex:1;background:{color};border:1px solid #aaa;font-size:10px;text-align:center;padding:3px;'>{slot}</div>")
+            cells.append(f"<div style='flex:1;background:{color};border:1px solid #aaa;font-size:10px;text-align:center;padding:3px;'></div>")
         st.markdown(f"<div style='display:flex;gap:1px;margin-bottom:10px;'>{''.join(cells)}</div>", unsafe_allow_html=True)
 
-    # 満インジケーター行
-    st.markdown("### □満（前後両方利用中）")
+    # -------------------------------------------------------------
+    # 満（前側・奥側両方利用中）
+    # -------------------------------------------------------------
+    st.markdown("### □満（前側・奥側 両方利用中）")
     cells_full = []
     for slot in TIME_SLOTS:
         s0 = parse_time(slot)
@@ -122,20 +125,24 @@ elif st.session_state["page"] == "day_view":
         front_used = any(
             (r["date"] == selected_date)
             and overlap(parse_time(r["start"]), parse_time(r["end"]), s0, e0)
-            for r in st.session_state["reservations"]["前方区画"]
+            for r in st.session_state["reservations"]["前側"]
         )
         back_used = any(
             (r["date"] == selected_date)
             and overlap(parse_time(r["start"]), parse_time(r["end"]), s0, e0)
-            for r in st.session_state["reservations"]["後方区画"]
+            for r in st.session_state["reservations"]["奥側"]
         )
+
+        # ブロックは常に描画（前側・奥側両方埋まり時のみ赤表示＋「満」）
         color = "#ff9999" if (front_used and back_used) else "#eeeeee"
         label = "満" if (front_used and back_used) else ""
-        cells_full.append(f"<div style='flex:1;background:{color};border:1px solid #aaa;font-size:10px;text-align:center;padding:3px;'>{label}</div>")
+        cells_full.append(
+            f"<div style='flex:1;background:{color};border:1px solid #aaa;font-size:10px;text-align:center;padding:3px;'>{label}</div>"
+        )
     st.markdown(f"<div style='display:flex;gap:1px;margin-bottom:10px;'>{''.join(cells_full)}</div>", unsafe_allow_html=True)
 
     # -------------------------------------------------------------
-    # 予約登録フォーム
+    # 登録フォーム
     # -------------------------------------------------------------
     st.divider()
     st.subheader("📝 新しい予約を登録")
@@ -165,7 +172,7 @@ elif st.session_state["page"] == "day_view":
                 st.experimental_rerun()
 
     # -------------------------------------------------------------
-    # 予約取消ブロック
+    # 予約取消
     # -------------------------------------------------------------
     st.divider()
     st.subheader("🗑️ 予約を取り消す")
@@ -186,9 +193,8 @@ elif st.session_state["page"] == "day_view":
     else:
         st.caption("当日の予約はありません。")
 
-    # 戻るボタン
     if st.button("⬅ カレンダーへ戻る"):
         st.session_state["page"] = "calendar"
         st.experimental_rerun()
 
-    st.caption("中央大学生活協同組合　情報通信チーム（満インジケーター実装版）")
+    st.caption("中央大学生活協同組合　情報通信チーム（v5：前側・奥側・満行 常時ブロック表示版）")
