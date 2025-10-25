@@ -181,12 +181,18 @@ elif st.session_state["page"] == "day_view":
         c1, c2, c3, c4, c5, c6 = st.columns([1, 1, 1, 1, 2, 1])
         with c1:
             room_sel = st.selectbox("区画", ROOMS)
+
+        # ---- 初期値を12:00〜13:00に固定 ----
         with c2:
-            start_index = TIME_SLOTS.index("12:00") if "12:00" in TIME_SLOTS else 0
-            start_sel = st.selectbox("開始", TIME_SLOTS, index=start_index)
+            if "start_time" not in st.session_state:
+                st.session_state["start_time"] = "12:00"
+            start_sel = st.selectbox("開始", TIME_SLOTS, index=TIME_SLOTS.index(st.session_state["start_time"]), key="start_time")
+
         with c3:
-            end_index = TIME_SLOTS.index("13:00") if "13:00" in TIME_SLOTS else start_index + 2
-            end_sel = st.selectbox("終了", TIME_SLOTS, index=end_index)
+            if "end_time" not in st.session_state:
+                st.session_state["end_time"] = "13:00"
+            end_sel = st.selectbox("終了", TIME_SLOTS, index=TIME_SLOTS.index(st.session_state["end_time"]), key="end_time")
+
         with c4:
             user = st.text_input("氏名", max_chars=16)
         with c5:
@@ -234,4 +240,4 @@ elif st.session_state["page"] == "day_view":
         st.session_state["page"] = "calendar"
         st.experimental_rerun()
 
-    st.caption("中央大学生活協同組合　情報通信チーム　ver.2025.01（安定稼働版）")
+    st.caption("中央大学生活協同組合　情報通信チーム　ver.2025.01（12:00初期値＋永続保存版）")
