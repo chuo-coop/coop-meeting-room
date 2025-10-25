@@ -176,7 +176,7 @@ elif st.session_state["page"] == "day_view":
     for rname, items in st.session_state["reservations"].items():
         for it in items:
             if it["date"] == selected_date:
-                all_res.append({\"room\": rname, **it})
+                all_res.append({"room": rname, **it})
 
     if all_res:
         df_cancel = pd.DataFrame(all_res)
@@ -194,6 +194,7 @@ elif st.session_state["page"] == "day_view":
         st.experimental_rerun()
 
     st.caption("中央大学生活協同組合　情報通信チーム（統合＋ログイン版）")
+
 
 
 
