@@ -42,7 +42,7 @@ if "reservations" not in st.session_state:
     st.session_state["reservations"] = {r: [] for r in ROOMS}
 
 # -------------------------------------------------------------
-# CSV永続化
+# CSV 永続化
 # -------------------------------------------------------------
 def save_reservations():
     all_res = []
@@ -62,59 +62,50 @@ def load_reservations():
 load_reservations()
 
 # -------------------------------------------------------------
-# 共通関数
+# 基本関数
 # -------------------------------------------------------------
 def parse_time(tstr): h, m = map(int, tstr.split(":")); return time(h, m)
 def overlap(s1, e1, s2, e2): return s1 < e2 and s2 < e1
 
 # -------------------------------------------------------------
-# 整合処理：前後半面の重なりで全体利用を構築
+# 整合処理（前後半面が重なる場合に全体利用を生成）
 # -------------------------------------------------------------
 def sync_full_room(date):
     front = st.session_state["reservations"]["前方区画"]
     back = st.session_state["reservations"]["後方区画"]
+    full_new = []
 
-    # 全体利用を該当日だけリセット
-    st.session_state["reservations"]["全体利用"] = [
-        r for r in st.session_state["reservations"]["全体利用"] if r["date"] != date
-    ]
-
-    new_full = []
     for f in front:
         for b in back:
             if (
-                f["date"] == date == b["date"]
-                and overlap(
-                    parse_time(f["start"]), parse_time(f["end"]),
-                    parse_time(b["start"]), parse_time(b["end"])
-                )
+                f["date"] == b["date"] == date
+                and overlap(parse_time(f["start"]), parse_time(f["end"]),
+                            parse_time(b["start"]), parse_time(b["end"]))
             ):
-                # 重複防止
-                if not any(
-                    r["date"] == date
-                    and r["start"] == min(f["start"], b["start"])
-                    and r["end"] == max(f["end"], b["end"])
-                    for r in new_full
-                ):
-                    new_full.append({
-                        "date": date,
-                        "start": min(f["start"], b["start"]),
-                        "end": max(f["end"], b["end"]),
-                        "user": f["user"],
-                        "purpose": f.get("purpose", ""),
-                        "extension": f.get("extension", "")
-                    })
+                full_new.append({
+                    "date": date,
+                    "start": min(f["start"], b["start"]),
+                    "end": max(f["end"], b["end"]),
+                    "user": f["user"],
+                    "purpose": f.get("purpose", ""),
+                    "extension": f.get("extension", "")
+                })
 
-    st.session_state["reservations"]["全体利用"].extend(new_full)
+    # 対象日だけ置き換え
+    st.session_state["reservations"]["全体利用"] = [
+        r for r in st.session_state["reservations"]["全体利用"] if r["date"] != date
+    ] + full_new
+
     save_reservations()
 
 # -------------------------------------------------------------
-# 登録
+# 登録処理
 # -------------------------------------------------------------
 def register_reservation(room, date, start, end, user, purpose, extension):
-    new = {"date": date, "start": start, "end": end, "user": user, "purpose": purpose, "extension": extension}
+    new = {"date": date, "start": start, "end": end,
+           "user": user, "purpose": purpose, "extension": extension}
 
-    # 全体予約
+    # 全体予約の場合
     if room == "全体利用":
         for rname in ["前方区画", "後方区画"]:
             for r in st.session_state["reservations"][rname]:
@@ -122,8 +113,8 @@ def register_reservation(room, date, start, end, user, purpose, extension):
                                                   parse_time(start), parse_time(end)):
                     st.warning(f"{rname} に既に予約があります。全体利用はできません。")
                     return False
-        for target in ROOMS:
-            st.session_state["reservations"][target].append(new.copy())
+        for rname in ROOMS:
+            st.session_state["reservations"][rname].append(new.copy())
         save_reservations()
         return True
 
@@ -139,7 +130,7 @@ def register_reservation(room, date, start, end, user, purpose, extension):
     return True
 
 # -------------------------------------------------------------
-# 取消
+# 取消処理
 # -------------------------------------------------------------
 def cancel_reservation(room, user, start, end, date):
     for rname in ROOMS:
@@ -153,12 +144,12 @@ def cancel_reservation(room, user, start, end, date):
     st.experimental_rerun()
 
 # -------------------------------------------------------------
-# カレンダー
+# カレンダー画面
 # -------------------------------------------------------------
 if st.session_state["page"] == "calendar":
     st.title("📅 会議室カレンダー")
-    sel = st.date_input("日付を選択", st.session_state["selected_date"])
-    st.session_state["selected_date"] = sel
+    selected = st.date_input("日付を選択", st.session_state["selected_date"])
+    st.session_state["selected_date"] = selected
     if st.button("この日の予約状況を見る"):
         st.session_state["page"] = "day_view"
         st.experimental_rerun()
@@ -229,4 +220,4 @@ elif st.session_state["page"] == "day_view":
         st.session_state["page"] = "calendar"
         st.experimental_rerun()
 
-    st.caption("中央大学生活協同組合　情報通信チーム　ver.2025.07（全体適用完全対応版）")
+    st.caption("中央大学生活協同組合　情報通信チーム　ver.2025.08（重複同期制御版）")
