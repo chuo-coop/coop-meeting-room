@@ -81,7 +81,7 @@ if st.session_state["page"] == "calendar":
         st.experimental_rerun()
 
 # -------------------------------------------------------------
-# 日別表示
+# 日別表示（前側・奥側・満）
 # -------------------------------------------------------------
 elif st.session_state["page"] == "day_view":
     selected_date = st.session_state["selected_date"]
@@ -92,13 +92,11 @@ elif st.session_state["page"] == "day_view":
     <div style='display:flex;gap:24px;align-items:center;margin:6px 0 14px 2px;font-size:14px;'>
       <div><span style='display:inline-block;width:18px;height:18px;background:#ccffcc;border:1px solid #999;'></span>空室</div>
       <div><span style='display:inline-block;width:18px;height:18px;background:#ffcccc;border:1px solid #999;'></span>予約済</div>
-      <div><span style='display:inline-block;width:18px;height:18px;background:#ff9999;border:1px solid #999;'></span>満（前側・奥側両方利用中）</div>
+      <div><span style='display:inline-block;width:18px;height:18px;background:#ff9999;border:1px solid #999;'></span>満（前側・奥側 両方利用中）</div>
     </div>
     """, unsafe_allow_html=True)
 
-    # -------------------------------------------------------------
-    # 前側・奥側の利用状況
-    # -------------------------------------------------------------
+    # 前側・奥側の行
     for room in ROOMS:
         st.markdown(f"### 🏢 {room}")
         res_list = st.session_state["reservations"][room]
@@ -114,9 +112,7 @@ elif st.session_state["page"] == "day_view":
             cells.append(f"<div style='flex:1;background:{color};border:1px solid #aaa;font-size:10px;text-align:center;padding:3px;'></div>")
         st.markdown(f"<div style='display:flex;gap:1px;margin-bottom:10px;'>{''.join(cells)}</div>", unsafe_allow_html=True)
 
-    # -------------------------------------------------------------
-    # 満（前側・奥側両方利用中）
-    # -------------------------------------------------------------
+    # 満行（常時全ブロック表示）
     st.markdown("### □満（前側・奥側 両方利用中）")
     cells_full = []
     for slot in TIME_SLOTS:
@@ -132,17 +128,13 @@ elif st.session_state["page"] == "day_view":
             and overlap(parse_time(r["start"]), parse_time(r["end"]), s0, e0)
             for r in st.session_state["reservations"]["奥側"]
         )
-
-        # ブロックは常に描画（前側・奥側両方埋まり時のみ赤表示＋「満」）
         color = "#ff9999" if (front_used and back_used) else "#eeeeee"
         label = "満" if (front_used and back_used) else ""
-        cells_full.append(
-            f"<div style='flex:1;background:{color};border:1px solid #aaa;font-size:10px;text-align:center;padding:3px;'>{label}</div>"
-        )
+        cells_full.append(f"<div style='flex:1;background:{color};border:1px solid #aaa;font-size:10px;text-align:center;padding:3px;'>{label}</div>")
     st.markdown(f"<div style='display:flex;gap:1px;margin-bottom:10px;'>{''.join(cells_full)}</div>", unsafe_allow_html=True)
 
     # -------------------------------------------------------------
-    # 登録フォーム
+    # 予約登録
     # -------------------------------------------------------------
     st.divider()
     st.subheader("📝 新しい予約を登録")
@@ -166,13 +158,15 @@ elif st.session_state["page"] == "day_view":
         e = parse_time(end_sel)
         if e <= s:
             st.error("終了時刻は開始より後にしてください。")
+        elif not user:
+            st.error("氏名は必須です。")
         else:
             if register_reservation(room_sel, selected_date, start_sel, end_sel, user, purpose, extension):
                 st.success("登録が完了しました。")
                 st.experimental_rerun()
 
     # -------------------------------------------------------------
-    # 予約取消
+    # 予約一覧・取消
     # -------------------------------------------------------------
     st.divider()
     st.subheader("🗑️ 予約を取り消す")
@@ -185,7 +179,7 @@ elif st.session_state["page"] == "day_view":
 
     if all_res:
         df_cancel = pd.DataFrame(all_res)
-        sel = st.selectbox("削除する予約を選択", df_cancel.apply(lambda x: f"{x['room']} | {x['user']} | {x['start']}〜{x['end']}", axis=1))
+        sel = st.selectbox("取消対象を選択", df_cancel.apply(lambda x: f"{x['room']} | {x['user']} | {x['start']}〜{x['end']}", axis=1))
         if st.button("選択した予約を取り消す"):
             room, user, se = sel.split(" | ")
             start, end = se.split("〜")
@@ -197,4 +191,4 @@ elif st.session_state["page"] == "day_view":
         st.session_state["page"] = "calendar"
         st.experimental_rerun()
 
-    st.caption("中央大学生活協同組合　情報通信チーム（v5：前側・奥側・満行 常時ブロック表示版）")
+    st.caption("中央大学生活協同組合　情報通信チーム（v7：完全版）")
