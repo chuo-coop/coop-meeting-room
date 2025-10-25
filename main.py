@@ -114,7 +114,7 @@ elif st.session_state["page"] == "day_view":
     st.markdown(f"## 🗓️ {selected_date} の利用状況")
 
     # 凡例
-    st.markdown(\"\"\"
+    st.markdown("""
     <div style='display:flex;gap:24px;align-items:center;margin:6px 0 14px 2px;font-size:14px;'>
       <div><span style='display:inline-block;width:18px;height:18px;background:#ccffcc;border:1px solid #999;'></span>空室</div>
       <div><span style='display:inline-block;width:18px;height:18px;background:#ffcccc;border:1px solid #999;'></span>予約済</div>
@@ -194,3 +194,4 @@ elif st.session_state["page"] == "day_view":
         st.experimental_rerun()
 
     st.caption(\"中央大学生活協同組合　情報通信チーム（統合＋ログイン版）\")
+
