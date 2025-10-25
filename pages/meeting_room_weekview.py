@@ -2,7 +2,9 @@ import streamlit as st
 from datetime import datetime, timedelta, time
 import pandas as pd
 
-st.set_page_config(page_title="中大生協 会議室予約（日表示）", layout="wide")
+# ✅ ページ設定は main.py 側で行うため、ここでは set_page_config を削除
+
+st.markdown("## 📅 会議室予約（日表示）")
 
 ROOMS = ["前方区画", "後方区画", "全体利用"]
 TIME_SLOTS = [f"{h:02d}:{m:02d}" for h in range(9, 21) for m in (0, 30)]
@@ -55,7 +57,7 @@ def register_reservation(room, date, start, end, user, purpose, extension):
     return True
 
 # --- 予約削除関数 ---
-def cancel_reservation(room, user, start, end):
+def cancel_reservation(room, user, start, end, selected_date):
     for rlist in st.session_state["reservations"].values():
         rlist[:] = [r for r in rlist if not (r["user"] == user and r["start"] == start and r["end"] == end and r["date"] == selected_date)]
     st.success("🗑️ 予約を取り消しました。")
@@ -63,7 +65,7 @@ def cancel_reservation(room, user, start, end):
 
 # --- 日付選択 ---
 selected_date = st.session_state.get("selected_date", datetime.now().date())
-st.markdown(f"## 📅 {selected_date} の利用状況（全区画）")
+st.markdown(f"### 📆 {selected_date} の利用状況（全区画）")
 
 # --- 凡例 ---
 st.markdown("""
@@ -135,7 +137,7 @@ if all_res:
     if st.button("選択した予約を取り消す"):
         room, user, se = sel.split(" | ")
         start, end = se.split("〜")
-        cancel_reservation(room, user, start, end)
+        cancel_reservation(room, user, start, end, selected_date)
 else:
     st.caption("当日の予約はありません。")
 
@@ -148,4 +150,3 @@ else:
     st.caption("本日分の予約データはありません。")
 
 st.caption("中央大学生活協同組合　情報通信チーム（取消・内線対応版）")
-
