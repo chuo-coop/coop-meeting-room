@@ -1,5 +1,5 @@
 # =========================================================
-# 中大生協 会議室予約システム v3.3（確認ポップアップ安定版）
+# 中大生協 会議室予約システム v3.4（最終整備版）
 # =========================================================
 
 import streamlit as st
@@ -15,10 +15,8 @@ st.set_page_config(page_title="中大生協 会議室予約システム", layout
 # ログイン認証
 # -------------------------------------------------------------
 PASSWORD = "coop"
-
 if "authenticated" not in st.session_state:
     st.session_state["authenticated"] = False
-
 if not st.session_state["authenticated"]:
     st.markdown("<h2 style='text-align:center;'>🔒 会議室予約システム</h2>", unsafe_allow_html=True)
     col = st.columns([1, 2, 1])[1]
@@ -59,11 +57,22 @@ def parse_time(tstr):
 def overlap(start1, end1, start2, end2):
     return start1 < end2 and start2 < end1
 
+def has_conflict(room, date, start, end):
+    for r in st.session_state["reservations"][room]:
+        if r["date"] == date and r["status"] == "active" and overlap(parse_time(r["start"]), parse_time(r["end"]), parse_time(start), parse_time(end)):
+            return True
+    return False
+
 def register_reservation(room, date, start, end, user, purpose, ext):
+    if has_conflict(room, date, start, end):
+        st.warning("⚠️ この時間帯はすでに予約されています。")
+        st.session_state["pending_register"] = None
+        return
     new = {"date": date, "start": start, "end": end, "user": user,
            "purpose": purpose, "ext": ext, "status": "active", "cancel": ""}
     st.session_state["reservations"][room].append(new)
     st.session_state["pending_register"] = None
+    st.success("✅ 登録が完了しました。")
     st.experimental_rerun()
 
 def cancel_reservation(room, user, start, end, date):
@@ -72,6 +81,7 @@ def cancel_reservation(room, user, start, end, date):
             r["status"] = "cancel"
             r["cancel"] = datetime.now().strftime("%Y-%m-%d")
     st.session_state["pending_cancel"] = None
+    st.success("🗑️ 予約を取り消しました。")
     st.experimental_rerun()
 
 # -------------------------------------------------------------
@@ -94,24 +104,20 @@ elif st.session_state["page"] == "day_view":
 
     # === インジケータ ===
     st.markdown("### 🏢 利用インジケータ（凡例付き）")
-
     for idx, layer in enumerate(["前側", "奥側", "満"]):
         label = ["前側", "奥側", "満"][idx]
-        row = []
-        row.append(f"<div style='width:60px;text-align:center;font-weight:bold;border:1px solid #999;background:#f9f9f9;'>{label}</div>")
+        row = [f"<div style='width:60px;text-align:center;font-weight:600;font-size:14px;border:1px solid #999;background:#f9f9f9;'>{label}</div>"]
         for slot in TIME_SLOTS:
             s0 = parse_time(slot)
             e0 = (datetime.combine(datetime.today(), s0) + timedelta(minutes=30)).time()
             color, text = "#ffffff", ""
             if layer in ["前側", "奥側"]:
-                active = any(
-                    r["date"] == date and r["status"] == "active" and
-                    overlap(parse_time(r["start"]), parse_time(r["end"]), s0, e0)
-                    for r in st.session_state["reservations"][layer]
-                )
+                active = any(r["date"] == date and r["status"] == "active" and
+                             overlap(parse_time(r["start"]), parse_time(r["end"]), s0, e0)
+                             for r in st.session_state["reservations"][layer])
                 color = "#ffcccc" if active else "#ccffcc"
-                text = slot
-            else:  # 満
+                text = f"<span style='font-size:14px;font-weight:500;'>{slot}</span>"
+            else:
                 front_busy = any(r["date"] == date and r["status"] == "active" and
                                  overlap(parse_time(r["start"]), parse_time(r["end"]), s0, e0)
                                  for r in st.session_state["reservations"]["前側"])
@@ -119,9 +125,9 @@ elif st.session_state["page"] == "day_view":
                                 overlap(parse_time(r["start"]), parse_time(r["end"]), s0, e0)
                                 for r in st.session_state["reservations"]["奥側"])
                 if front_busy and back_busy:
-                    color = "#ff6666"
-                    text = "満"
-            row.append(f"<div style='flex:1;background:{color};border:1px solid #aaa;font-size:10px;text-align:center;padding:2px;'>{text}</div>")
+                    color = "#ff3333"
+                    text = "<b><span style='color:white;font-size:15px;'>満</span></b>"
+            row.append(f"<div style='flex:1;background:{color};border:1px solid #aaa;text-align:center;padding:4px;'>{text}</div>")
         st.markdown(f"<div style='display:flex;'>{''.join(row)}</div>", unsafe_allow_html=True)
 
     # === 使用状況一覧 ===
@@ -146,10 +152,9 @@ elif st.session_state["page"] == "day_view":
     else:
         st.caption("当日の予約はありません。")
 
-    # === 予約登録 ===
+    # === 登録フォーム ===
     st.divider()
     st.subheader("📝 新しい予約を登録")
-
     cols = st.columns([1, 1, 1, 1, 2, 1, 1])
     room = cols[0].selectbox("区画", ROOMS)
     start = cols[1].selectbox("開始", TIME_SLOTS)
@@ -166,31 +171,30 @@ elif st.session_state["page"] == "day_view":
             st.session_state["pending_register"] = {"room": room, "date": date, "start": start, "end": end, "user": user, "purpose": purpose, "ext": ext}
             st.experimental_rerun()
 
+    # === 登録確認ポップアップ ===
     if st.session_state["pending_register"]:
         d = st.session_state["pending_register"]
-        with st.container():
-            st.markdown("<div style='border:2px solid #666;padding:10px;background:#f0f0f0;text-align:center;'>"
-                        f"<b>登録内容確認：</b><br>{d['room']}　{d['start']}〜{d['end']}　{d['user']}<br>これで登録しますか？</div>",
-                        unsafe_allow_html=True)
-            c1, c2 = st.columns(2)
-            with c1:
+        st.markdown(f"<div style='border:2px solid #666;padding:10px;background:#f0f0f0;text-align:center;'>"
+                    f"<b>登録内容確認：</b><br>{d['room']}　{d['start']}〜{d['end']}　{d['user']}<br>これで登録しますか？</div>", unsafe_allow_html=True)
+        c1, c2, c3 = st.columns([1, 1, 1])
+        with c2:
+            c21, c22 = st.columns([1, 1])
+            with c21:
                 if st.button("はい、登録する"):
                     register_reservation(**d)
-            with c2:
+            with c22:
                 if st.button("戻る"):
                     st.session_state["pending_register"] = None
                     st.experimental_rerun()
 
-    # === 予約取消 ===
+    # === 取消処理 ===
     st.divider()
     st.subheader("🗑️ 予約取消")
-
     cancel_targets = []
     for room, items in st.session_state["reservations"].items():
         for r in items:
             if r["date"] == date and r["status"] == "active":
                 cancel_targets.append(f"{room} | {r['user']} | {r['start']}〜{r['end']}")
-
     if cancel_targets:
         sel = st.selectbox("取消対象を選択", cancel_targets)
         if st.button("取消"):
@@ -198,18 +202,17 @@ elif st.session_state["page"] == "day_view":
             start, end = t.split("〜")
             st.session_state["pending_cancel"] = {"room": room, "user": user, "start": start, "end": end, "date": date}
             st.experimental_rerun()
-
     if st.session_state["pending_cancel"]:
         d = st.session_state["pending_cancel"]
-        with st.container():
-            st.markdown("<div style='border:2px solid #900;padding:10px;background:#fff0f0;text-align:center;'>"
-                        f"<b>取消確認：</b><br>{d['room']}　{d['start']}〜{d['end']}　{d['user']}<br>本当に取り消しますか？</div>",
-                        unsafe_allow_html=True)
-            c1, c2 = st.columns(2)
-            with c1:
+        st.markdown(f"<div style='border:2px solid #900;padding:10px;background:#fff0f0;text-align:center;'>"
+                    f"<b>取消確認：</b><br>{d['room']}　{d['start']}〜{d['end']}　{d['user']}<br>本当に取り消しますか？</div>", unsafe_allow_html=True)
+        c1, c2, c3 = st.columns([1, 1, 1])
+        with c2:
+            c21, c22 = st.columns([1, 1])
+            with c21:
                 if st.button("はい、取消する"):
                     cancel_reservation(**d)
-            with c2:
+            with c22:
                 if st.button("戻る"):
                     st.session_state["pending_cancel"] = None
                     st.experimental_rerun()
@@ -218,4 +221,4 @@ elif st.session_state["page"] == "day_view":
         st.session_state["page"] = "calendar"
         st.experimental_rerun()
 
-    st.caption("中央大学生活協同組合　情報通信チーム（v3.3確認ポップアップ安定版）")
+    st.caption("中央大学生活協同組合　情報通信チーム（v3.4最終整備版）")
