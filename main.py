@@ -282,8 +282,8 @@ elif st.session_state["page"] == "day_view":
             with b1:
                 if st.button("はい、取消する"):
                     if d["room"] == "全面":
-    for sub in ["前側", "奥側"]:
-        for r in st.session_state["reservations"][sub]:
+                        for sub in ["前側", "奥側"]:
+                            for r in st.session_state["reservations"][sub]:
             # ↓↓↓ ここを修正（部分一致で照合） ↓↓↓
             if (d["user"] in r["user"]
                 and r["start"] == d["start"]
@@ -306,5 +306,6 @@ else:
         st.experimental_rerun()
 
     st.caption("中央大学生活協同組合　情報通信チーム（v3.4.5 全面利用対応版）")
+
 
 
