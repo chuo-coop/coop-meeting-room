@@ -1,6 +1,6 @@
 # =========================================================
-# 中大生協 会議室予約システム v3.4.3
-# （リアルタイム警告＋下段中央ボタン版）
+# 中大生協 会議室予約システム v3.4.4
+# （リアルタイム警告＋確定時反映版）
 # =========================================================
 
 import streamlit as st
@@ -59,6 +59,7 @@ def overlap(start1, end1, start2, end2):
     return start1 < end2 and start2 < end1
 
 def has_conflict(room, date, start, end):
+    """同区画・同日・時間重複を検出"""
     date_str = str(date)
     for r in st.session_state["reservations"][room]:
         if str(r.get("date")) == date_str and r.get("status", "active") == "active":
@@ -69,19 +70,23 @@ def has_conflict(room, date, start, end):
     return False
 
 def register_reservation(room, date, start, end, user, purpose, ext):
+    """登録確定（rerun実行）"""
     new = {"date": str(date), "start": start, "end": end, "user": user,
            "purpose": purpose, "ext": ext, "status": "active", "cancel": ""}
     st.session_state["reservations"][room].append(new)
     st.session_state["pending_register"] = None
     st.success("✅ 登録が完了しました。")
+    st.experimental_rerun()  # ← 登録確定時のみ再描画
 
 def cancel_reservation(room, user, start, end, date):
+    """取消確定（rerun実行）"""
     for r in st.session_state["reservations"][room]:
         if r["user"] == user and r["start"] == start and r["end"] == end and str(r["date"]) == str(date):
             r["status"] = "cancel"
             r["cancel"] = datetime.now().strftime("%Y-%m-%d")
     st.session_state["pending_cancel"] = None
     st.success("🗑️ 予約を取り消しました。")
+    st.experimental_rerun()  # ← 取消確定時のみ再描画
 
 # -------------------------------------------------------------
 # カレンダー画面
@@ -223,4 +228,4 @@ elif st.session_state["page"] == "day_view":
         st.session_state["page"] = "calendar"
         st.experimental_rerun()
 
-    st.caption("中央大学生活協同組合　情報通信チーム（v3.4.3 リアルタイム警告＋下段中央ボタン版）")
+    st.caption("中央大学生活協同組合　情報通信チーム（v3.4.4 リアルタイム警告＋確定時反映版）")
