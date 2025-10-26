@@ -57,11 +57,7 @@ def register_reservation(room, date, start, end, user, purpose, extension):
     new_res = {"date": date, "start": start, "end": end,
                "user": user, "purpose": purpose, "extension": extension}
 
-    targets = []
-    if room == "全面":
-        targets = ["前側", "奥側"]
-    else:
-        targets = [room]
+    targets = ["前側", "奥側"] if room == "全面" else [room]
 
     # 重複チェック
     for t in targets:
@@ -103,7 +99,6 @@ def merge_reservations(date):
                 key = (f["start"], f["end"], f["user"])
                 seen.add(key)
                 merged.append({"room": "全面", **f})
-    # 単独予約を追加
     for f in f_list:
         key = (f["start"], f["end"], f["user"])
         if f["date"] == date and key not in seen:
@@ -119,10 +114,8 @@ def merge_reservations(date):
 # -------------------------------------------------------------
 if st.session_state["page"] == "calendar":
     st.title("📅 会議室カレンダー")
-
     selected = st.date_input("日付を選択", st.session_state["selected_date"])
     st.session_state["selected_date"] = selected
-
     if st.button("この日の予約状況を見る", use_container_width=True):
         st.session_state["page"] = "day_view"
         st.experimental_rerun()
@@ -134,7 +127,6 @@ elif st.session_state["page"] == "day_view":
     selected_date = st.session_state["selected_date"]
     st.markdown(f"## 🗓️ {selected_date} の利用状況")
 
-    # 凡例
     st.markdown("""
     <div style='display:flex;gap:24px;align-items:center;margin:6px 0 14px 2px;font-size:14px;'>
       <div><span style='display:inline-block;width:18px;height:18px;background:#ccffcc;border:1px solid #999;'></span>空室</div>
@@ -175,7 +167,7 @@ elif st.session_state["page"] == "day_view":
 
     st.divider()
 
-    # 📝 新しい予約登録
+    # 新規登録
     st.subheader("📝 新しい予約を登録")
     c1, c2, c3, c4, c5, c6 = st.columns([1,1,1,1,2,1])
     with c1:
@@ -190,32 +182,27 @@ elif st.session_state["page"] == "day_view":
         purpose = st.text_input("目的", placeholder="任意")
     with c6:
         extension = st.text_input("内線", placeholder="例：1234")
-
-    st.markdown("<div style='text-align:center;'>", unsafe_allow_html=True)
-    if st.button("登録", use_container_width=False):
+    if st.button("登録", use_container_width=True):
         s = parse_time(start_sel)
         e = parse_time(end_sel)
         if e <= s:
             st.error("終了時刻は開始より後にしてください。")
         elif not user:
             st.error("氏名は必須です。")
-        else:
-            if register_reservation(room_sel, selected_date, start_sel, end_sel, user, purpose, extension):
-                st.success("登録が完了しました。")
-                st.experimental_rerun()
-    st.markdown("</div>", unsafe_allow_html=True)
+        elif register_reservation(room_sel, selected_date, start_sel, end_sel, user, purpose, extension):
+            st.success("登録が完了しました。")
+            st.experimental_rerun()
 
     st.divider()
 
-    # 🗑️ 予約取消
+    # 取消
     st.subheader("🗑️ 予約を取り消す")
-
     all_res = merge_reservations(selected_date)
     if all_res:
         df_cancel = pd.DataFrame(all_res)
         df_cancel["display"] = df_cancel.apply(lambda x: f"{x['room']} | {x['user']} | {x['start']}〜{x['end']}", axis=1)
         sel = st.selectbox("削除する予約を選択", df_cancel["display"])
-        if st.button("選択した予約を取り消す", use_container_width=False):
+        if st.button("選択した予約を取り消す", use_container_width=True):
             room, user, se = sel.split(" | ")
             start, end = se.split("〜")
             cancel_reservation(room, user, start, end, selected_date)
@@ -226,4 +213,4 @@ elif st.session_state["page"] == "day_view":
         st.session_state["page"] = "calendar"
         st.experimental_rerun()
 
-    st.caption("中央大学生活協同組合　情報通信チーム（v3.5r 安定稼働版）")
+    st.caption("中央大学生活協同組合　情報通信チーム（v3.5 完動版）")
