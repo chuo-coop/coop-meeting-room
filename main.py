@@ -69,13 +69,20 @@ def has_conflict(room, date, start, end):
                 if overlap(parse_time(r["start"]), parse_time(r["end"]), parse_time(start), parse_time(end)):
                     return True
 
-    # 通常の部分区画重複判定
-    for r in st.session_state["reservations"][room]:
-        if str(r.get("date")) == date_str and r.get("status", "active") == "active":
-            s1, e1 = parse_time(r["start"]), parse_time(r["end"])
-            s2, e2 = parse_time(start), parse_time(end)
-            if overlap(s1, e1, s2, e2):
-                return True
+    # 部分 or 全面の通常判定
+    if room == "全面":
+        targets = ["前側", "奥側"]
+    else:
+        targets = [room]
+
+    for sub in targets:
+        for r in st.session_state["reservations"][sub]:
+            if str(r.get("date")) == date_str and r.get("status", "active") == "active":
+                s1, e1 = parse_time(r["start"]), parse_time(r["end"])
+                s2, e2 = parse_time(start), parse_time(end)
+                if overlap(s1, e1, s2, e2):
+                    return True
+
     return False
 
 def register_reservation(room, date, start, end, user, purpose, ext):
@@ -297,3 +304,4 @@ elif st.session_state["page"] == "day_view":
         st.experimental_rerun()
 
     st.caption("中央大学生活協同組合　情報通信チーム（v3.4.5 全面利用対応版）")
+
