@@ -81,7 +81,7 @@ if st.session_state["page"] == "calendar":
         st.experimental_rerun()
 
 # -------------------------------------------------------------
-# 日別表示（前側・奥側・満）
+# 日別表示（前側・奥側・満＋一覧）
 # -------------------------------------------------------------
 elif st.session_state["page"] == "day_view":
     selected_date = st.session_state["selected_date"]
@@ -134,6 +134,22 @@ elif st.session_state["page"] == "day_view":
     st.markdown(f"<div style='display:flex;gap:1px;margin-bottom:10px;'>{''.join(cells_full)}</div>", unsafe_allow_html=True)
 
     # -------------------------------------------------------------
+    # 使用状況一覧（当日分）
+    # -------------------------------------------------------------
+    st.subheader("📋 使用状況一覧（当日）")
+    all_res = []
+    for rname, items in st.session_state["reservations"].items():
+        for it in items:
+            if it["date"] == selected_date:
+                all_res.append({"区画": rname, "開始": it["start"], "終了": it["end"], "氏名": it["user"], "目的": it["purpose"], "内線": it["extension"]})
+
+    if all_res:
+        df_view = pd.DataFrame(all_res).sort_values(by=["区画", "開始"])
+        st.dataframe(df_view, use_container_width=True, hide_index=True)
+    else:
+        st.caption("本日分の予約はありません。")
+
+    # -------------------------------------------------------------
     # 予約登録
     # -------------------------------------------------------------
     st.divider()
@@ -166,19 +182,19 @@ elif st.session_state["page"] == "day_view":
                 st.experimental_rerun()
 
     # -------------------------------------------------------------
-    # 予約一覧・取消
+    # 予約取消
     # -------------------------------------------------------------
     st.divider()
     st.subheader("🗑️ 予約を取り消す")
 
-    all_res = []
+    all_res_cancel = []
     for rname, items in st.session_state["reservations"].items():
         for it in items:
             if it["date"] == selected_date:
-                all_res.append({"room": rname, **it})
+                all_res_cancel.append({"room": rname, **it})
 
-    if all_res:
-        df_cancel = pd.DataFrame(all_res)
+    if all_res_cancel:
+        df_cancel = pd.DataFrame(all_res_cancel)
         sel = st.selectbox("取消対象を選択", df_cancel.apply(lambda x: f"{x['room']} | {x['user']} | {x['start']}〜{x['end']}", axis=1))
         if st.button("選択した予約を取り消す"):
             room, user, se = sel.split(" | ")
@@ -187,8 +203,11 @@ elif st.session_state["page"] == "day_view":
     else:
         st.caption("当日の予約はありません。")
 
+    # -------------------------------------------------------------
+    # 戻るボタン
+    # -------------------------------------------------------------
     if st.button("⬅ カレンダーへ戻る"):
         st.session_state["page"] = "calendar"
         st.experimental_rerun()
 
-    st.caption("中央大学生活協同組合　情報通信チーム（v7：完全版）")
+    st.caption("中央大学生活協同組合　情報通信チーム（v8：前側・奥側・満＋当日使用状況一覧 完全版）")
