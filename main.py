@@ -138,7 +138,6 @@ def cancel_reservation(room, user, start, end, date):
     st.session_state["pending_cancel"] = None
     st.success("🗑️ 予約を取り消しました。")
     st.experimental_rerun()
-
 # -------------------------------------------------------------
 # カレンダー画面
 # -------------------------------------------------------------
@@ -197,6 +196,7 @@ elif st.session_state["page"] == "day_view":
                 f"<div style='flex:1;background:{color};border:1px solid #aaa;text-align:center;padding:4px;'>{text}</div>"
             )
         st.markdown(f"<div style='display:flex;'>{''.join(row)}</div>", unsafe_allow_html=True)
+
     # --- 一覧表 ---
     st.divider()
     st.markdown("### 📋 使用状況一覧（時間順）")
@@ -320,7 +320,7 @@ elif st.session_state["page"] == "day_view":
                     if d["room"] == "全面":
                         for sub in ["前側", "奥側"]:
                             for r in st.session_state["reservations"][sub]:
-                                if (d["user"] in r["user"]  # ← 部分一致で照合
+                                if (d["user"] == r["user"]  # ← 完全一致に修正済
                                     and r["start"] == d["start"]
                                     and r["end"] == d["end"]
                                     and str(r["date"]) == str(d["date"])
@@ -330,7 +330,6 @@ elif st.session_state["page"] == "day_view":
                         st.success("🗑️ 全面予約を取り消しました。")
                     else:
                         cancel_reservation(**d)
-                    # ✅ rerun位置を統一（全面・部分両方に対応）
                     st.experimental_rerun()
             with b2:
                 if st.button("戻る"):
@@ -340,5 +339,4 @@ elif st.session_state["page"] == "day_view":
         st.session_state["page"] = "calendar"
         st.experimental_rerun()
 
-    st.caption("中央大学生活協同組合　情報通信チーム（v3.4.5 全面利用対応版）")
-
+    st.caption("中央大学生活協同組合　情報通信チーム（v3.4.5 全面利用対応版・取消完全一致修正版）")
