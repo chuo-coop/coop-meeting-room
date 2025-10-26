@@ -45,7 +45,7 @@ if "pending_register" not in st.session_state:
 if "pending_cancel" not in st.session_state:
     st.session_state["pending_cancel"] = None
 
-ROOMS = ["前側", "奥側", "全面"]  # ← 全面追加
+ROOMS = ["前側", "奥側", "全面"]
 TIME_SLOTS = [f"{h:02d}:{m:02d}" for h in range(9, 21) for m in (0, 30)]
 
 # -------------------------------------------------------------
@@ -55,28 +55,17 @@ def parse_time(tstr):
     h, m = map(int, tstr.split(":"))
     return time(h, m)
 
-
 def overlap(start1, end1, start2, end2):
     return start1 < end2 and start2 < end1
 
-
 def has_conflict(room, date, start, end):
-    """同区画・同日・時間重複を検出（全面相互排他対応）"""
     date_str = str(date)
-
-    # 全面予約存在チェック（部分利用を禁止）
     for subroom in ["前側", "奥側"]:
         for r in st.session_state["reservations"][subroom]:
             if str(r.get("date")) == date_str and r.get("status") == "active" and r["user"].endswith("(全面)"):
                 if overlap(parse_time(r["start"]), parse_time(r["end"]), parse_time(start), parse_time(end)):
                     return True
-
-    # 部分 or 全面の通常判定
-    if room == "全面":
-        targets = ["前側", "奥側"]
-    else:
-        targets = [room]
-
+    targets = ["前側", "奥側"] if room == "全面" else [room]
     for sub in targets:
         for r in st.session_state["reservations"][sub]:
             if str(r.get("date")) == date_str and r.get("status", "active") == "active":
@@ -84,19 +73,14 @@ def has_conflict(room, date, start, end):
                 s2, e2 = parse_time(start), parse_time(end)
                 if overlap(s1, e1, s2, e2):
                     return True
-
     return False
 
-
 def register_reservation(room, date, start, end, user, purpose, ext):
-    """登録確定（rerun実行・全面対応）"""
     if room == "全面":
-        # 両区画に重複がないか確認
         for subroom in ["前側", "奥側"]:
             if has_conflict(subroom, date, start, end):
                 st.warning(f"{subroom}に既存の予約があります。全面予約できません。")
                 return
-        # 両区画へ同時登録
         for subroom in ["前側", "奥側"]:
             new = {
                 "date": str(date),
@@ -128,9 +112,7 @@ def register_reservation(room, date, start, end, user, purpose, ext):
         st.success("✅ 登録が完了しました。")
         st.experimental_rerun()
 
-
 def cancel_reservation(room, user, start, end, date):
-    """取消確定（rerun実行）"""
     for r in st.session_state["reservations"][room]:
         if r["user"] == user and r["start"] == start and r["end"] == end and str(r["date"]) == str(date):
             r["status"] = "cancel"
@@ -138,6 +120,7 @@ def cancel_reservation(room, user, start, end, date):
     st.session_state["pending_cancel"] = None
     st.success("🗑️ 予約を取り消しました。")
     st.experimental_rerun()
+
 # -------------------------------------------------------------
 # カレンダー画面
 # -------------------------------------------------------------
@@ -148,9 +131,8 @@ if st.session_state["page"] == "calendar":
     if st.button("この日の予約状況を見る"):
         st.session_state["page"] = "day_view"
         st.experimental_rerun()
-
 # -------------------------------------------------------------
-# 日別表示（ここから後半へ続く）
+# 日別表示
 # -------------------------------------------------------------
 elif st.session_state["page"] == "day_view":
     date = st.session_state["selected_date"]
@@ -214,7 +196,6 @@ elif st.session_state["page"] == "day_view":
                     "取消日": r["cancel"]
                 })
 
-    # --- 全面統合表示 ---
     merged = []
     seen = set()
     for i, r1 in enumerate(all_recs):
@@ -239,7 +220,6 @@ elif st.session_state["page"] == "day_view":
     # --- 登録 ---
     st.divider()
     st.subheader("📝 新しい予約を登録")
-
     c1, c2, c3, c4, c5, c6 = st.columns([1, 1, 1, 1, 2, 1])
     room = c1.selectbox("区画", ROOMS)
     start = c2.selectbox("開始", TIME_SLOTS)
@@ -259,8 +239,10 @@ elif st.session_state["page"] == "day_view":
             elif has_conflict(room, date, start, end):
                 st.warning("⚠️ この時間帯はすでに予約されています。")
             else:
-                st.session_state["pending_register"] = {"room": room, "date": date, "start": start, "end": end,
-                                                         "user": user, "purpose": purpose, "ext": ext}
+                st.session_state["pending_register"] = {
+                    "room": room, "date": date, "start": start, "end": end,
+                    "user": user, "purpose": purpose, "ext": ext
+                }
 
     # 登録確認
     if st.session_state["pending_register"]:
@@ -287,7 +269,6 @@ elif st.session_state["page"] == "day_view":
             if str(r["date"]) == str(date) and r["status"] == "active":
                 cancels.append(f"{room} | {r['user']} | {r['start']}〜{r['end']}")
 
-    # 全面予約ペアを抽出して追加
     pairs = []
     for r in st.session_state["reservations"]["前側"]:
         for s in st.session_state["reservations"]["奥側"]:
@@ -306,14 +287,33 @@ elif st.session_state["page"] == "day_view":
         if st.button("取消"):
             room, user, t = sel.split(" | ")
             start, end = t.split("〜")
-            st.session_state["pending_cancel"] = {"room": room, "user": user, "start": start, "end": end, "date": date}
+            st.session_state["pending_cancel"] = {
+                "room": room, "user": user, "start": start, "end": end, "date": date
+            }
 
-if ((r["user"] == d["user"]) or (r["user"] == f"{d['user']}(全面)") or (d["user"] in r["user"])) \
-    and r["start"] == d["start"] \
-    and r["end"] == d["end"] \
-    and str(r["date"]) == str(d["date"]) \
-    and r["status"] == "active":
-
+    if st.session_state["pending_cancel"]:
+        d = st.session_state["pending_cancel"]
+        st.markdown(f"<div style='border:2px solid #900;padding:10px;background:#fff0f0;text-align:center;'>"
+                    f"<b>取消確認：</b><br>{d['room']}　{d['start']}〜{d['end']}　{d['user']}<br>本当に取り消しますか？</div>", unsafe_allow_html=True)
+        c1, c2, c3 = st.columns([1, 1, 1])
+        with c2:
+            b1, b2 = st.columns([1, 1])
+            with b1:
+                if st.button("はい、取消する"):
+                    if d["room"] == "全面":
+                        for sub in ["前側", "奥側"]:
+                            for r in st.session_state["reservations"][sub]:
+                                if ((r["user"] == d["user"]) or (r["user"] == f"{d['user']}(全面)") or (d["user"] in r["user"])) \
+                                    and r["start"] == d["start"] \
+                                    and r["end"] == d["end"] \
+                                    and str(r["date"]) == str(d["date"]) \
+                                    and r["status"] == "active":
+                                    r["status"] = "cancel"
+                                    r["cancel"] = datetime.now().strftime("%Y-%m-%d")
+                        st.success("🗑️ 全面予約を取り消しました。")
+                    else:
+                        cancel_reservation(**d)
+                    st.experimental_rerun()
             with b2:
                 if st.button("戻る"):
                     st.session_state["pending_cancel"] = None
@@ -322,5 +322,4 @@ if ((r["user"] == d["user"]) or (r["user"] == f"{d['user']}(全面)") or (d["use
         st.session_state["page"] = "calendar"
         st.experimental_rerun()
 
-    st.caption("中央大学生活協同組合　情報通信チーム（v3.4.5 全面利用対応版・取消完全一致修正版）")
-
+    st.caption("中央大学生活協同組合　情報通信チーム（v3.4.5 完全整合修正版）")
