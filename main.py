@@ -1,5 +1,6 @@
 # =========================================================
-# 中大生協 会議室予約システム v3.4.2（確定エラーメッセージ版）
+# 中大生協 会議室予約システム v3.4.3
+# （リアルタイム警告＋下段中央ボタン版）
 # =========================================================
 
 import streamlit as st
@@ -58,7 +59,6 @@ def overlap(start1, end1, start2, end2):
     return start1 < end2 and start2 < end1
 
 def has_conflict(room, date, start, end):
-    """同区画・同日・時間重複を検出する"""
     date_str = str(date)
     for r in st.session_state["reservations"][room]:
         if str(r.get("date")) == date_str and r.get("status", "active") == "active":
@@ -73,8 +73,7 @@ def register_reservation(room, date, start, end, user, purpose, ext):
            "purpose": purpose, "ext": ext, "status": "active", "cancel": ""}
     st.session_state["reservations"][room].append(new)
     st.session_state["pending_register"] = None
-    st.session_state["success_message"] = "✅ 登録が完了しました。"
-    st.experimental_rerun()
+    st.success("✅ 登録が完了しました。")
 
 def cancel_reservation(room, user, start, end, date):
     for r in st.session_state["reservations"][room]:
@@ -82,8 +81,7 @@ def cancel_reservation(room, user, start, end, date):
             r["status"] = "cancel"
             r["cancel"] = datetime.now().strftime("%Y-%m-%d")
     st.session_state["pending_cancel"] = None
-    st.session_state["success_message"] = "🗑️ 予約を取り消しました。"
-    st.experimental_rerun()
+    st.success("🗑️ 予約を取り消しました。")
 
 # -------------------------------------------------------------
 # カレンダー画面
@@ -102,14 +100,6 @@ if st.session_state["page"] == "calendar":
 elif st.session_state["page"] == "day_view":
     date = st.session_state["selected_date"]
     st.markdown(f"## 🗓️ {date} の利用状況")
-
-    # --- メッセージ表示 ---
-    if "error_message" in st.session_state:
-        st.warning(st.session_state["error_message"])
-        del st.session_state["error_message"]
-    if "success_message" in st.session_state:
-        st.success(st.session_state["success_message"])
-        del st.session_state["success_message"]
 
     # --- インジケータ ---
     st.markdown("### 🏢 利用インジケータ（凡例付き）")
@@ -161,26 +151,31 @@ elif st.session_state["page"] == "day_view":
     # --- 登録 ---
     st.divider()
     st.subheader("📝 新しい予約を登録")
-    cols = st.columns([1, 1, 1, 1, 2, 1, 1])
-    room = cols[0].selectbox("区画", ROOMS)
-    start = cols[1].selectbox("開始", TIME_SLOTS)
-    end = cols[2].selectbox("終了", TIME_SLOTS)
-    user = cols[3].text_input("担当者")
-    purpose = cols[4].text_input("目的（任意）")
-    ext = cols[5].text_input("内線（任意）")
-    if cols[6].button("登録"):
-        if not user:
-            st.error("担当者名を入力してください。")
-        elif parse_time(end) <= parse_time(start):
-            st.error("終了時刻は開始より後にしてください。")
-        elif has_conflict(room, date, start, end):
-            st.session_state["error_message"] = "⚠️ この時間帯はすでに予約されています。"
-            st.experimental_rerun()
-        else:
-            st.session_state["pending_register"] = {"room": room, "date": date, "start": start, "end": end, "user": user, "purpose": purpose, "ext": ext}
-            st.experimental_rerun()
 
-    # --- 登録確認 ---
+    # 入力欄
+    c1, c2, c3, c4, c5, c6 = st.columns([1, 1, 1, 1, 2, 1])
+    room = c1.selectbox("区画", ROOMS)
+    start = c2.selectbox("開始", TIME_SLOTS)
+    end = c3.selectbox("終了", TIME_SLOTS)
+    user = c4.text_input("担当者")
+    purpose = c5.text_input("目的（任意）")
+    ext = c6.text_input("内線（任意）")
+
+    # 下段中央に登録ボタン
+    st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
+    btn_center = st.columns([1, 1, 1])[1]
+    with btn_center:
+        if st.button("登録", use_container_width=True):
+            if not user:
+                st.error("担当者名を入力してください。")
+            elif parse_time(end) <= parse_time(start):
+                st.error("終了時刻は開始より後にしてください。")
+            elif has_conflict(room, date, start, end):
+                st.warning("⚠️ この時間帯はすでに予約されています。")
+            else:
+                st.session_state["pending_register"] = {"room": room, "date": date, "start": start, "end": end, "user": user, "purpose": purpose, "ext": ext}
+
+    # 登録確認
     if st.session_state["pending_register"]:
         d = st.session_state["pending_register"]
         st.markdown(f"<div style='border:2px solid #666;padding:10px;background:#f0f0f0;text-align:center;'>"
@@ -194,7 +189,6 @@ elif st.session_state["page"] == "day_view":
             with b2:
                 if st.button("戻る"):
                     st.session_state["pending_register"] = None
-                    st.experimental_rerun()
 
     # --- 取消 ---
     st.divider()
@@ -210,7 +204,7 @@ elif st.session_state["page"] == "day_view":
             room, user, t = sel.split(" | ")
             start, end = t.split("〜")
             st.session_state["pending_cancel"] = {"room": room, "user": user, "start": start, "end": end, "date": date}
-            st.experimental_rerun()
+
     if st.session_state["pending_cancel"]:
         d = st.session_state["pending_cancel"]
         st.markdown(f"<div style='border:2px solid #900;padding:10px;background:#fff0f0;text-align:center;'>"
@@ -224,10 +218,9 @@ elif st.session_state["page"] == "day_view":
             with b2:
                 if st.button("戻る"):
                     st.session_state["pending_cancel"] = None
-                    st.experimental_rerun()
 
     if st.button("⬅ カレンダーへ戻る"):
         st.session_state["page"] = "calendar"
         st.experimental_rerun()
 
-    st.caption("中央大学生活協同組合　情報通信チーム（v3.4.2 確定エラーメッセージ版）")
+    st.caption("中央大学生活協同組合　情報通信チーム（v3.4.3 リアルタイム警告＋下段中央ボタン版）")
