@@ -302,6 +302,25 @@ elif st.session_state["page"] == "day_view":
                         st.success("🗑️ 全面予約を取り消しました。")
                     else:
                         cancel_reservation(**d)
+# -------------------------------------------------------------
+# 単一区画の予約取消
+# -------------------------------------------------------------
+def cancel_reservation(room, user, start, end, date):
+    """前側・奥側など、単一区画の予約を取消する関数"""
+    for r in st.session_state["reservations"][room]:
+        if (
+            r["user"] == user
+            and r["start"] == start
+            and r["end"] == end
+            and str(r["date"]) == str(date)
+            and r.get("status") == "active"
+        ):
+            r["status"] = "cancel"
+            r["cancel"] = datetime.now().strftime("%Y-%m-%d")
+    st.session_state["pending_cancel"] = None
+    st.success("🗑️ 予約を取り消しました。")
+    st.experimental_rerun()
+
                     st.session_state["pending_cancel"] = None
                     st.experimental_rerun()
             with b2:
@@ -313,3 +332,4 @@ elif st.session_state["page"] == "day_view":
         st.experimental_rerun()
 
     st.caption("中央大学生活協同組合　情報通信チーム（v3.4.6 Full 安定版）")
+
