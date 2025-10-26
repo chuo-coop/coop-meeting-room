@@ -302,7 +302,7 @@ elif st.session_state["page"] == "day_view":
     cancels = list(dict.fromkeys(cancels + pairs))
 
     if cancels:
-        sel = st.selectbox("取消対象を選択", cancels)
+        sel = st.selectbox("取消対象を選択", cancels, key=f"cancel_sel_{date}")
         if st.button("取消"):
             room, user, t = sel.split(" | ")
             start, end = t.split("〜")
@@ -341,3 +341,4 @@ elif st.session_state["page"] == "day_view":
         st.experimental_rerun()
 
     st.caption("中央大学生活協同組合　情報通信チーム（v3.4.5 全面利用対応版）")
+
