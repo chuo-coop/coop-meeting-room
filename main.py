@@ -108,8 +108,8 @@ elif st.session_state["page"] == "day_view":
 
     # --- インジケータ ---
     st.markdown("### 🏢 利用インジケータ（凡例付き）")
-    for idx, layer in enumerate(["前側", "奥側", "満"]):
-        label = ["前側", "奥側", "満"][idx]
+    for idx, layer in enumerate(["前側", "奥側", "空満"]):
+        label = ["前側", "奥側", "空満"][idx]
         row = [f"<div style='width:60px;text-align:center;font-weight:600;font-size:14px;border:1px solid #999;background:#f9f9f9;'>{label}</div>"]
         for slot in TIME_SLOTS:
             s0 = parse_time(slot)
@@ -229,3 +229,4 @@ elif st.session_state["page"] == "day_view":
         st.experimental_rerun()
 
     st.caption("中央大学生活協同組合　情報通信チーム（v3.4.4 リアルタイム警告＋確定時反映版）")
+
