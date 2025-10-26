@@ -197,3 +197,147 @@ elif st.session_state["page"] == "day_view":
                 f"<div style='flex:1;background:{color};border:1px solid #aaa;text-align:center;padding:4px;'>{text}</div>"
             )
         st.markdown(f"<div style='display:flex;'>{''.join(row)}</div>", unsafe_allow_html=True)
+    # --- 一覧表 ---
+    st.divider()
+    st.markdown("### 📋 使用状況一覧（時間順）")
+    all_recs = []
+    for room, items in st.session_state["reservations"].items():
+        for r in items:
+            if str(r["date"]) == str(date):
+                all_recs.append({
+                    "区画": room,
+                    "時間": f"{r['start']}〜{r['end']}",
+                    "担当者": r["user"],
+                    "目的": r["purpose"],
+                    "内線": r["ext"],
+                    "状態": "取消" if r["status"] == "cancel" else "有効",
+                    "取消日": r["cancel"]
+                })
+
+    # --- 全面統合表示 ---
+    merged = []
+    seen = set()
+    for i, r1 in enumerate(all_recs):
+        if i in seen:
+            continue
+        same = [r for r in all_recs if r["担当者"] == r1["担当者"]
+                and r["時間"] == r1["時間"]
+                and r["状態"] == r1["状態"]
+                and r["区画"] in ["前側", "奥側"]]
+        if len(same) == 2:
+            merged.append({**r1, "区画": "全面"})
+            seen.update([all_recs.index(x) for x in same])
+        else:
+            merged.append(r1)
+
+    if merged:
+        df = pd.DataFrame(merged).sort_values(by="時間")
+        st.dataframe(df, use_container_width=True, hide_index=True)
+    else:
+        st.caption("当日の予約はありません。")
+
+    # --- 登録 ---
+    st.divider()
+    st.subheader("📝 新しい予約を登録")
+
+    c1, c2, c3, c4, c5, c6 = st.columns([1, 1, 1, 1, 2, 1])
+    room = c1.selectbox("区画", ROOMS)
+    start = c2.selectbox("開始", TIME_SLOTS)
+    end = c3.selectbox("終了", TIME_SLOTS)
+    user = c4.text_input("担当者")
+    purpose = c5.text_input("目的（任意）")
+    ext = c6.text_input("内線（任意）")
+
+    st.markdown("<div style='height:8px'></div>", unsafe_allow_html=True)
+    btn_center = st.columns([1, 1, 1])[1]
+    with btn_center:
+        if st.button("登録", use_container_width=True):
+            if not user:
+                st.error("担当者名を入力してください。")
+            elif parse_time(end) <= parse_time(start):
+                st.error("終了時刻は開始より後にしてください。")
+            elif has_conflict(room, date, start, end):
+                st.warning("⚠️ この時間帯はすでに予約されています。")
+            else:
+                st.session_state["pending_register"] = {"room": room, "date": date, "start": start, "end": end,
+                                                         "user": user, "purpose": purpose, "ext": ext}
+
+    # 登録確認
+    if st.session_state["pending_register"]:
+        d = st.session_state["pending_register"]
+        st.markdown(f"<div style='border:2px solid #666;padding:10px;background:#f0f0f0;text-align:center;'>"
+                    f"<b>登録内容確認：</b><br>{d['room']}　{d['start']}〜{d['end']}　{d['user']}<br>これで登録しますか？</div>", unsafe_allow_html=True)
+        c1, c2, c3 = st.columns([1, 1, 1])
+        with c2:
+            b1, b2 = st.columns([1, 1])
+            with b1:
+                if st.button("はい、登録する"):
+                    register_reservation(**d)
+            with b2:
+                if st.button("戻る"):
+                    st.session_state["pending_register"] = None
+
+    # --- 取消 ---
+    st.divider()
+    st.subheader("🗑️ 予約取消")
+
+    cancels = []
+    for room, items in st.session_state["reservations"].items():
+        for r in items:
+            if str(r["date"]) == str(date) and r["status"] == "active":
+                cancels.append(f"{room} | {r['user']} | {r['start']}〜{r['end']}")
+
+    # 全面予約ペアを抽出して追加
+    pairs = []
+    for r in st.session_state["reservations"]["前側"]:
+        for s in st.session_state["reservations"]["奥側"]:
+            if (r["user"] == s["user"]
+                and r["start"] == s["start"]
+                and r["end"] == s["end"]
+                and str(r["date"]) == str(s["date"])
+                and r["status"] == "active"
+                and s["status"] == "active"):
+                pairs.append(f"全面 | {r['user']} | {r['start']}〜{r['end']}")
+
+    cancels = list(dict.fromkeys(cancels + pairs))
+
+    if cancels:
+        sel = st.selectbox("取消対象を選択", cancels)
+        if st.button("取消"):
+            room, user, t = sel.split(" | ")
+            start, end = t.split("〜")
+            st.session_state["pending_cancel"] = {"room": room, "user": user, "start": start, "end": end, "date": date}
+
+    if st.session_state["pending_cancel"]:
+        d = st.session_state["pending_cancel"]
+        st.markdown(f"<div style='border:2px solid #900;padding:10px;background:#fff0f0;text-align:center;'>"
+                    f"<b>取消確認：</b><br>{d['room']}　{d['start']}〜{d['end']}　{d['user']}<br>本当に取り消しますか？</div>", unsafe_allow_html=True)
+        c1, c2, c3 = st.columns([1, 1, 1])
+        with c2:
+            b1, b2 = st.columns([1, 1])
+            with b1:
+                if st.button("はい、取消する"):
+                    if d["room"] == "全面":
+                        for sub in ["前側", "奥側"]:
+                            for r in st.session_state["reservations"][sub]:
+                                if (d["user"] in r["user"]  # ← 部分一致で照合
+                                    and r["start"] == d["start"]
+                                    and r["end"] == d["end"]
+                                    and str(r["date"]) == str(d["date"])
+                                    and r["status"] == "active"):
+                                    r["status"] = "cancel"
+                                    r["cancel"] = datetime.now().strftime("%Y-%m-%d")
+                        st.success("🗑️ 全面予約を取り消しました。")
+                        st.experimental_rerun()
+                    else:
+                        cancel_reservation(**d)
+            with b2:
+                if st.button("戻る"):
+                    st.session_state["pending_cancel"] = None
+
+    if st.button("⬅ カレンダーへ戻る"):
+        st.session_state["page"] = "calendar"
+        st.experimental_rerun()
+
+    st.caption("中央大学生活協同組合　情報通信チーム（v3.4.5 全面利用対応版）")
+
