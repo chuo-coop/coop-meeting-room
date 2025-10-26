@@ -1,5 +1,5 @@
 # =========================================================
-# 中大生協 会議室予約システム v3.4.1（重複チェック完全修正版）
+# 中大生協 会議室予約システム v3.4.2（確定エラーメッセージ版）
 # =========================================================
 
 import streamlit as st
@@ -69,15 +69,11 @@ def has_conflict(room, date, start, end):
     return False
 
 def register_reservation(room, date, start, end, user, purpose, ext):
-    if has_conflict(room, date, start, end):
-        st.warning("⚠️ この時間帯はすでに予約されています。")
-        st.session_state["pending_register"] = None
-        return
     new = {"date": str(date), "start": start, "end": end, "user": user,
            "purpose": purpose, "ext": ext, "status": "active", "cancel": ""}
     st.session_state["reservations"][room].append(new)
     st.session_state["pending_register"] = None
-    st.success("✅ 登録が完了しました。")
+    st.session_state["success_message"] = "✅ 登録が完了しました。"
     st.experimental_rerun()
 
 def cancel_reservation(room, user, start, end, date):
@@ -86,7 +82,7 @@ def cancel_reservation(room, user, start, end, date):
             r["status"] = "cancel"
             r["cancel"] = datetime.now().strftime("%Y-%m-%d")
     st.session_state["pending_cancel"] = None
-    st.success("🗑️ 予約を取り消しました。")
+    st.session_state["success_message"] = "🗑️ 予約を取り消しました。"
     st.experimental_rerun()
 
 # -------------------------------------------------------------
@@ -106,6 +102,14 @@ if st.session_state["page"] == "calendar":
 elif st.session_state["page"] == "day_view":
     date = st.session_state["selected_date"]
     st.markdown(f"## 🗓️ {date} の利用状況")
+
+    # --- メッセージ表示 ---
+    if "error_message" in st.session_state:
+        st.warning(st.session_state["error_message"])
+        del st.session_state["error_message"]
+    if "success_message" in st.session_state:
+        st.success(st.session_state["success_message"])
+        del st.session_state["success_message"]
 
     # --- インジケータ ---
     st.markdown("### 🏢 利用インジケータ（凡例付き）")
@@ -169,10 +173,14 @@ elif st.session_state["page"] == "day_view":
             st.error("担当者名を入力してください。")
         elif parse_time(end) <= parse_time(start):
             st.error("終了時刻は開始より後にしてください。")
+        elif has_conflict(room, date, start, end):
+            st.session_state["error_message"] = "⚠️ この時間帯はすでに予約されています。"
+            st.experimental_rerun()
         else:
             st.session_state["pending_register"] = {"room": room, "date": date, "start": start, "end": end, "user": user, "purpose": purpose, "ext": ext}
             st.experimental_rerun()
 
+    # --- 登録確認 ---
     if st.session_state["pending_register"]:
         d = st.session_state["pending_register"]
         st.markdown(f"<div style='border:2px solid #666;padding:10px;background:#f0f0f0;text-align:center;'>"
@@ -222,4 +230,4 @@ elif st.session_state["page"] == "day_view":
         st.session_state["page"] = "calendar"
         st.experimental_rerun()
 
-    st.caption("中央大学生活協同組合　情報通信チーム（v3.4.1 重複防止版）")
+    st.caption("中央大学生活協同組合　情報通信チーム（v3.4.2 確定エラーメッセージ版）")
