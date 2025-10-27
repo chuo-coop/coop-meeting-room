@@ -15,7 +15,7 @@ st.set_page_config(page_title="中大生協 会議室予約システム", layout
 # -------------------------------------------------------------
 # ログイン認証
 # -------------------------------------------------------------
-PASSWORD = "coop"
+PASSWORD = ""
 if "authenticated" not in st.session_state:
     st.session_state["authenticated"] = False
 if not st.session_state["authenticated"]:
@@ -328,3 +328,4 @@ elif st.session_state["page"] == "day_view":
         st.experimental_rerun()
 
     st.caption("中央大学生活協同組合　情報通信チーム（v3.4.6 Full 安定版）")
+
