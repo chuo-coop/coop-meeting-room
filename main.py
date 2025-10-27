@@ -1,8 +1,3 @@
-# =========================================================
-# 中大生協 会議室予約システム v3.4.6 Full（完全安定版）
-# （全面利用対応版：登録・一覧統合・一括取消・再描画安定）
-# =========================================================
-
 import streamlit as st
 import pandas as pd
 from datetime import datetime, timedelta, time
@@ -286,7 +281,10 @@ elif st.session_state["page"] == "day_view":
                 and s["status"] == "active"):
                 pairs.append(f"全面 | {r['user']} | {r['start']}〜{r['end']}")
 
+    # ▼ 修正済み部分（L520–L540）
+    cancels = [c for c in cancels if "(全面)" not in c]
     cancels = list(dict.fromkeys(cancels + pairs))
+    # ▲ 修正済み部分ここまで
 
     if cancels:
         sel = st.selectbox("取消対象を選択", cancels, key=f"cancel_sel_{date}")
@@ -328,4 +326,3 @@ elif st.session_state["page"] == "day_view":
         st.experimental_rerun()
 
     st.caption("中央大学生活協同組合　情報通信チーム（v3.4.6 Full 安定版）")
-
