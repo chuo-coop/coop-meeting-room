@@ -1,6 +1,13 @@
+# =========================================================
+# 中大生協 会議室予約システム v3.4.7 Full（Memory Extension）
+# （Google Sheets永続化対応版 / GCPスコープ明示）
+# =========================================================
+
 import streamlit as st
 import pandas as pd
 from datetime import datetime, timedelta, time
+import gspread
+from google.oauth2.service_account import Credentials
 
 # -------------------------------------------------------------
 # ページ設定
@@ -39,6 +46,66 @@ if "pending_register" not in st.session_state:
     st.session_state["pending_register"] = None
 if "pending_cancel" not in st.session_state:
     st.session_state["pending_cancel"] = None
+
+# -------------------------------------------------------------
+# Google Sheets 永続化設定
+# -------------------------------------------------------------
+SHEET_ID = "1ebbNq681Loz2r-_Wkgbd_6qABN_H1GzsG2Ja0p9JJOg"
+
+def get_gsheet():
+    SCOPES = [
+        "https://www.googleapis.com/auth/spreadsheets",
+        "https://www.googleapis.com/auth/drive"
+    ]
+    creds = Credentials.from_service_account_info(
+        st.secrets["gcp_service_account"],
+        scopes=SCOPES
+    )
+    client = gspread.authorize(creds)
+    sheet = client.open_by_key(SHEET_ID).sheet1
+    return sheet
+
+def load_reservations_from_gsheet():
+    try:
+        sheet = get_gsheet()
+        records = sheet.get_all_records()
+        st.session_state["reservations"] = {"前側": [], "奥側": []}
+        for row in records:
+            if row["区画"] in ["前側", "奥側"]:
+                st.session_state["reservations"][row["区画"]].append({
+                    "date": row["日付"],
+                    "start": row["開始"],
+                    "end": row["終了"],
+                    "user": row["担当者"],
+                    "purpose": row["目的"],
+                    "ext": row["内線"],
+                    "status": row["状態"],
+                    "cancel": row["取消日"]
+                })
+        st.caption("📗 Google Sheetsから既存データを読み込みました。")
+    except Exception:
+        st.warning("Google Sheetsの読み込みに失敗しました。初回起動の可能性があります。")
+
+def save_reservations_to_gsheet():
+    try:
+        sheet = get_gsheet()
+        all_data = []
+        for room, items in st.session_state["reservations"].items():
+            for r in items:
+                all_data.append([
+                    room, r["date"], r["start"], r["end"], r["user"],
+                    r["purpose"], r["ext"], r["status"], r["cancel"]
+                ])
+        sheet.clear()
+        sheet.update(
+            [["区画", "日付", "開始", "終了", "担当者", "目的", "内線", "状態", "取消日"]] + all_data
+        )
+        st.caption("💾 Google Sheetsに保存しました。")
+    except Exception as e:
+        st.error(f"Google Sheetsへの保存に失敗しました: {e}")
+
+# 起動時にデータ読込
+load_reservations_from_gsheet()
 
 ROOMS = ["前側", "奥側", "全面"]
 TIME_SLOTS = [f"{h:02d}:{m:02d}" for h in range(9, 21) for m in (0, 30)]
@@ -88,6 +155,7 @@ def register_reservation(room, date, start, end, user, purpose, ext):
                 "cancel": "",
             }
             st.session_state["reservations"][subroom].append(new)
+        save_reservations_to_gsheet()
         st.session_state["pending_register"] = None
         st.success("✅ 全面予約を登録しました。")
         st.experimental_rerun()
@@ -103,12 +171,12 @@ def register_reservation(room, date, start, end, user, purpose, ext):
             "cancel": "",
         }
         st.session_state["reservations"][room].append(new)
+        save_reservations_to_gsheet()
         st.session_state["pending_register"] = None
         st.success("✅ 登録が完了しました。")
         st.experimental_rerun()
 
 def cancel_reservation(room, user, start, end, date):
-    """単一区画の予約を取消する"""
     for r in st.session_state["reservations"][room]:
         if (
             r["user"] == user
@@ -119,6 +187,7 @@ def cancel_reservation(room, user, start, end, date):
         ):
             r["status"] = "cancel"
             r["cancel"] = datetime.now().strftime("%Y-%m-%d")
+    save_reservations_to_gsheet()
     st.session_state["pending_cancel"] = None
     st.success("🗑️ 予約を取り消しました。")
     st.experimental_rerun()
@@ -142,9 +211,9 @@ elif st.session_state["page"] == "day_view":
     st.markdown(f"## 🗓️ {date} の利用状況")
 
     # --- インジケータ ---
-    st.markdown("### 🏢 会議室利用状況")
-    for idx, layer in enumerate(["前側", "奥側", "空満"]):
-        label = ["前側", "奥側", "空満"][idx]
+    st.markdown("### 🏢 利用インジケータ（凡例付き）")
+    for idx, layer in enumerate(["前側", "奥側", "満"]):
+        label = ["前側", "奥側", "満"][idx]
         row = [
             f"<div style='width:60px;text-align:center;font-weight:600;font-size:14px;border:1px solid #999;background:#f9f9f9;'>{label}</div>"
         ]
@@ -184,7 +253,7 @@ elif st.session_state["page"] == "day_view":
 
     # --- 一覧表 ---
     st.divider()
-    st.markdown("### 📋 使用状況一覧")
+    st.markdown("### 📋 使用状況一覧（時間順）")
     all_recs = []
     for room, items in st.session_state["reservations"].items():
         for r in items:
@@ -281,10 +350,7 @@ elif st.session_state["page"] == "day_view":
                 and s["status"] == "active"):
                 pairs.append(f"全面 | {r['user']} | {r['start']}〜{r['end']}")
 
-    # ▼ 修正済み部分（L520–L540）
-    cancels = [c for c in cancels if "(全面)" not in c]
     cancels = list(dict.fromkeys(cancels + pairs))
-    # ▲ 修正済み部分ここまで
 
     if cancels:
         sel = st.selectbox("取消対象を選択", cancels, key=f"cancel_sel_{date}")
@@ -312,18 +378,9 @@ elif st.session_state["page"] == "day_view":
                                     and r["status"] == "active":
                                     r["status"] = "cancel"
                                     r["cancel"] = datetime.now().strftime("%Y-%m-%d")
+                        save_reservations_to_gsheet()
                         st.success("🗑️ 全面予約を取り消しました。")
                         st.session_state["pending_cancel"] = None
                         st.experimental_rerun()
                     else:
                         cancel_reservation(**d)
-            with b2:
-                if st.button("戻る"):
-                    st.session_state["pending_cancel"] = None
-
-    if st.button("⬅ カレンダーへ戻る"):
-        st.session_state["page"] = "calendar"
-        st.experimental_rerun()
-
-    st.caption("中央大学生活協同組合　情報通信チーム（2025.10 安定版）")
-
