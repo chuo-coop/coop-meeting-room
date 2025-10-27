@@ -68,6 +68,7 @@ def get_gsheet():
     sheet = client.open_by_key(SHEET_ID).sheet1
     return sheet
 
+@st.cache_data(ttl=30)
 def load_reservations_from_gsheet():
     """Sheetsから読み込み。全面1行は内部で前側/奥側の2件に展開し、user名は(全面)を付与して互換維持"""
     try:
@@ -268,9 +269,9 @@ elif st.session_state["page"] == "day_view":
     st.markdown(f"## 🗓️ {date} の利用状況")
 
     # --- インジケータ（赤：使用中／緑：空き／満：両室占有） ---
-    st.markdown("### 🏢 利用インジケータ（凡例付き）")
-    for idx, layer in enumerate(["前側", "奥側", "満"]):
-        label = ["前側", "奥側", "満"][idx]
+    st.markdown("### 🏢 会議室 利用状況")
+    for idx, layer in enumerate(["前側", "奥側", "空満"]):
+        label = ["前側", "奥側", "空満"][idx]
         row = [
             f"<div style='width:60px;text-align:center;font-weight:600;font-size:14px;border:1px solid #999;background:#f9f9f9;'>{label}</div>"
         ]
@@ -318,7 +319,7 @@ elif st.session_state["page"] == "day_view":
                 all_recs.append({
                     "区画": room,
                     "時間": f"{r['start']}〜{r['end']}",
-                    "担当者": r["user"],
+                    "担当者": r["user"].replace("(全面)", ""),   # ← この1行だけ変更
                     "目的": r["purpose"],
                     "内線": r["ext"],
                     "状態": "取消" if r["status"] == "cancel" else "有効",
@@ -413,9 +414,10 @@ elif st.session_state["page"] == "day_view":
                 if key in seen_keys:
                     continue
                 if key in pairs_set:
-                    cancels.append(f"全面 | {r['user']} | {r['start']}〜{r['end']}")
+                    cancels.append(f"全面 | {r['user'].replace('(全面)', '')} | {r['start']}〜{r['end']}")
                 else:
-                    cancels.append(f"{room_name} | {r['user']} | {r['start']}〜{r['end']}")
+                    cancels.append(f"{room_name} | {r['user'].replace('(全面)', '')} | {r['start']}〜{r['end']}")
+
                 seen_keys.add(key)
 
     if cancels:
@@ -462,3 +464,4 @@ elif st.session_state["page"] == "day_view":
         st.experimental_rerun()
 
     st.caption("中央大学生活協同組合　情報通信チーム（v3.4.7 Memory Extension, Fixed）")
+
