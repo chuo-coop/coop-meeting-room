@@ -187,6 +187,7 @@ def cancel_reservation(room, user, start, end, date):
         ):
             r["status"] = "cancel"
             r["cancel"] = datetime.now().strftime("%Y-%m-%d")
+            r["room"] = "全面"  # ←★ここを追加
     save_reservations_to_gsheet()
     st.session_state["pending_cancel"] = None
     st.success("🗑️ 予約を取り消しました。")
@@ -395,6 +396,7 @@ elif st.session_state["page"] == "day_view":
         st.experimental_rerun()
 
     st.caption("中央大学生活協同組合　情報通信チーム（v3.4.7 Memory Extension）")
+
 
 
 
