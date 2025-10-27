@@ -334,10 +334,14 @@ elif st.session_state["page"] == "day_view":
     st.subheader("🗑️ 予約取消")
 
     cancels = []
+    seen = set()
     for room, items in st.session_state["reservations"].items():
         for r in items:
             if str(r["date"]) == str(date) and r["status"] == "active":
-                cancels.append(f"{room} | {r['user']} | {r['start']}〜{r['end']}")
+                key = (r["user"], r["start"], r["end"])
+                if key not in seen:
+                    cancels.append(f"{room} | {r['user']} | {r['start']}〜{r['end']}")
+                    seen.add(key)
 
     pairs = []
     for r in st.session_state["reservations"]["前側"]:
@@ -349,8 +353,6 @@ elif st.session_state["page"] == "day_view":
                 and r["status"] == "active"
                 and s["status"] == "active"):
                 pairs.append(f"全面 | {r['user']} | {r['start']}〜{r['end']}")
-
-    cancels = list(dict.fromkeys(cancels + pairs))
 
     if cancels:
         sel = st.selectbox("取消対象を選択", cancels, key=f"cancel_sel_{date}")
@@ -393,6 +395,7 @@ elif st.session_state["page"] == "day_view":
         st.experimental_rerun()
 
     st.caption("中央大学生活協同組合　情報通信チーム（v3.4.7 Memory Extension）")
+
 
 
 
