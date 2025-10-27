@@ -274,9 +274,9 @@ elif st.session_state["page"] == "day_view":
         if i in seen:
             continue
         same = [r for r in all_recs if r["担当者"] == r1["担当者"]
-                and r["時間"] == r1["時間"]
-                and r["状態"] == r1["状態"]
-                and r["区画"] in ["前側", "奥側"]]
+                and r["区画"] in ["前側", "奥側"]
+                and r["開始"] == r1.get("開始") and r["終了"] == r1.get("終了")
+                and r["状態"] == r1["状態"]]
         if len(same) == 2:
             merged.append({**r1, "区画": "全面"})
             seen.update([all_recs.index(x) for x in same])
@@ -393,4 +393,5 @@ elif st.session_state["page"] == "day_view":
         st.experimental_rerun()
 
     st.caption("中央大学生活協同組合　情報通信チーム（v3.4.7 Memory Extension）")
+
 
