@@ -77,7 +77,7 @@ def load_reservations_from_gsheet():
                 })
         st.caption("📗 Google Sheetsから既存データを読み込みました。")
     except Exception as e:
-        st.warning("Google Sheetsの読み込みに失敗しました。初回起動の可能性があります。")
+        st.exception(e)
 
 def save_reservations_to_gsheet():
     try:
@@ -95,7 +95,7 @@ def save_reservations_to_gsheet():
         )
         st.caption("💾 Google Sheetsに保存しました。")
     except Exception as e:
-        st.error(f"Google Sheetsへの保存に失敗しました: {e}")
+        st.exception(e)
 
 # 起動時にデータ読込
 load_reservations_from_gsheet()
@@ -386,4 +386,5 @@ elif st.session_state["page"] == "day_view":
         st.experimental_rerun()
 
     st.caption("中央大学生活協同組合　情報通信チーム（v3.4.7 Memory Extension）")
+
 
