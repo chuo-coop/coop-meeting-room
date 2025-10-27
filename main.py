@@ -384,3 +384,13 @@ elif st.session_state["page"] == "day_view":
                         st.experimental_rerun()
                     else:
                         cancel_reservation(**d)
+            with b2:
+                if st.button("戻る"):
+                    st.session_state["pending_cancel"] = None
+
+    if st.button("⬅ カレンダーへ戻る"):
+        st.session_state["page"] = "calendar"
+        st.experimental_rerun()
+
+    st.caption("中央大学生活協同組合　情報通信チーム（v3.4.7 Memory Extension）")
+
