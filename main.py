@@ -142,9 +142,9 @@ elif st.session_state["page"] == "day_view":
     st.markdown(f"## 🗓️ {date} の利用状況")
 
     # --- インジケータ ---
-    st.markdown("### 🏢 利用インジケータ（凡例付き）")
-    for idx, layer in enumerate(["前側", "奥側", "満"]):
-        label = ["前側", "奥側", "満"][idx]
+    st.markdown("### 🏢 会議室利用状況")
+    for idx, layer in enumerate(["前側", "奥側", "空満"]):
+        label = ["前側", "奥側", "空満"][idx]
         row = [
             f"<div style='width:60px;text-align:center;font-weight:600;font-size:14px;border:1px solid #999;background:#f9f9f9;'>{label}</div>"
         ]
@@ -184,7 +184,7 @@ elif st.session_state["page"] == "day_view":
 
     # --- 一覧表 ---
     st.divider()
-    st.markdown("### 📋 使用状況一覧（時間順）")
+    st.markdown("### 📋 使用状況一覧")
     all_recs = []
     for room, items in st.session_state["reservations"].items():
         for r in items:
@@ -325,4 +325,5 @@ elif st.session_state["page"] == "day_view":
         st.session_state["page"] = "calendar"
         st.experimental_rerun()
 
-    st.caption("中央大学生活協同組合　情報通信チーム（v3.4.6 Full 安定版）")
+    st.caption("中央大学生活協同組合　情報通信チーム（2025.10 安定版）")
+
