@@ -53,7 +53,7 @@ if "pending_cancel" not in st.session_state:
 SHEET_ID = "1ebbNq681Loz2r-_Wkgbd_6qABN_H1GzsG2Ja0p9JJOg"
 
 def get_gsheet():
-    creds = Credentials.from_authorized_user_info(st.secrets["gcp_oauth"])
+    creds = Credentials.from_service_account_info(st.secrets["gcp_service_account"])
     client = gspread.authorize(creds)
     sheet = client.open_by_key(SHEET_ID).sheet1
     return sheet
@@ -386,3 +386,4 @@ elif st.session_state["page"] == "day_view":
         st.experimental_rerun()
 
     st.caption("中央大学生活協同組合　情報通信チーム（v3.4.7 Memory Extension）")
+
