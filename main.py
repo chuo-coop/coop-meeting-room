@@ -311,23 +311,34 @@ elif st.session_state["page"] == "week_view":
 
     # 各日を順に描画
     for d in week:
-        # 📅 日付とボタンを横並びに
+# 📅 日付タイトルとボタンを横並びに配置（同一行）
         weekday_map = ["月", "火", "水", "木", "金", "土", "日"]
         w = weekday_map[d.weekday()]
-        col1, col2 = st.columns([5, 1])  # 左広く、右にボタンを寄せる
 
-        with col1:
-            st.markdown(f"### 📅 {d.strftime('%Y-%m-%d')}（{w}）")
+        # HTMLで日付＋ボタンを1行に整列
+        date_str = d.strftime("%Y-%m-%d")
+        button_key = f"btn_{d}"
 
-        with col2:
-            st.write("")  # ボタンを縦位置中央寄せにするための空行
-            if st.button(f"{d.strftime('%m/%d')}（{w}）の予約を見る", key=f"btn_{d}"):
-                st.session_state["selected_date"] = d
-                st.session_state["page"] = "day_view"
-                st.experimental_rerun()
+        html = f"""
+        <div style="display:flex; align-items:center; justify-content:space-between;">
+            <h3 style="margin:0;">📅 {date_str}（{w}）</h3>
+            <form action="#" method="post">
+                <input type="submit" value="🔍 この日の予約を見る" id="{button_key}"
+                style="background-color:#f0f0f0; border:1px solid #ccc; border-radius:6px;
+                       padding:4px 8px; cursor:pointer; font-size:14px;">
+            </form>
+        </div>
+        """
+        st.markdown(html, unsafe_allow_html=True)
+
+        # 実際のStreamlitボタンでページ遷移処理
+        if st.button(f"🔍 この日の予約を見る", key=f"real_{button_key}"):
+            st.session_state["selected_date"] = d
+            st.session_state["page"] = "day_view"
+            st.experimental_rerun()
 
         # 🔻 日付・ボタンのすぐ下にインジケータ表示
-        render_day_indicator(d)
+            render_day_indicator(d)
 
     # ループ終了後に戻るボタンを表示
     if st.button("⬅ カレンダーへ戻る"):
@@ -536,20 +547,4 @@ elif st.session_state["page"] == "day_view":
         st.experimental_rerun()
 
     st.caption("中央大学生活協同組合　情報通信チーム（v3.4.7 Memory Extension, Fixed）")
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
