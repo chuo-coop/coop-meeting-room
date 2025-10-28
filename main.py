@@ -320,8 +320,8 @@ elif st.session_state["page"] == "week_view":
                 st.experimental_rerun()
 
         # 週用の簡易インジケータ（空満）
-        for idx, layer in enumerate(["前側", "奥側", "空満"]):
-            label = ["前側", "奥側", "空満"][idx]
+        for idx, layer in enumerate(["前側", "奥側"]):
+            label = ["前側", "奥側",][idx]
             row = [
                 f"<div style='width:60px;text-align:center;font-weight:600;font-size:14px;border:1px solid #999;background:#f9f9f9;'>{label}</div>"
             ]
@@ -572,6 +572,7 @@ elif st.session_state["page"] == "day_view":
         st.experimental_rerun()
 
     st.caption("中央大学生活協同組合　情報通信チーム（v3.4.7 Memory Extension, Fixed）")
+
 
 
 
