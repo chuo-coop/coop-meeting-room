@@ -249,6 +249,29 @@ def cancel_reservation(room, user, start, end, date):
     st.session_state["pending_cancel"] = None
     st.success("🗑️ 予約を取り消しました。")
     st.experimental_rerun()
+def render_day_indicator(date):
+    """既存の“日別インジケータ”描画ロジックを日単位で再利用（閲覧専用）"""
+    st.markdown(f"### 🗓️ {date.strftime('%Y-%m-%d (%a)')}")
+    for layer in ["前側", "奥側"]:
+        row = [
+            f"<div style='width:60px;text-align:center;font-weight:600;font-size:14px;border:1px solid #999;background:#f9f9f9;'>{layer}</div>"
+        ]
+        for slot in TIME_SLOTS:
+            s0 = parse_time(slot)
+            e0 = (datetime.combine(datetime.today(), s0) + timedelta(minutes=30)).time()
+            active = any(
+                r["status"] == "active"
+                and str(r["date"]) == str(date)
+                and overlap(parse_time(r["start"]), parse_time(r["end"]), s0, e0)
+                for r in st.session_state["reservations"][layer]
+            )
+            color = "#ffcccc" if active else "#ccffcc"
+            text = f"<span style='font-size:12px;font-weight:500;'>{slot}</span>"
+            row.append(
+                f"<div style='flex:1;background:{color};border:1px solid #aaa;text-align:center;padding:2px;'>{text}</div>"
+            )
+        st.markdown(f"<div style='display:flex;'>{''.join(row)}</div>", unsafe_allow_html=True)
+    st.markdown("---")
 
 # -------------------------------------------------------------
 # カレンダー画面
@@ -257,14 +280,39 @@ if st.session_state["page"] == "calendar":
     st.title("📅 会議室カレンダー")
     selected = st.date_input("日付を選択", datetime.now().date())
     st.session_state["selected_date"] = selected
-    if st.button("この日の予約状況を見る"):
-        st.session_state["page"] = "day_view"
+    start_of_week = selected - timedelta(days=selected.weekday())
+    week_dates = [start_of_week + timedelta(days=i) for i in range(7)]
+    if st.button("この週の予約状況を見る"):
+        st.session_state["page"] = "week_view"
+        st.session_state["selected_week"] = week_dates
         st.experimental_rerun()
+
 
 # -------------------------------------------------------------
 # 日別表示
 # -------------------------------------------------------------
+elif st.session_state["page"] == "week_view":
+    st.title("📆 週間利用状況（閲覧のみ）")
+
+    # 保存されている週データを取得
+    week = st.session_state.get("selected_week", [])
+
+    # 各日を順にインジケータ表示
+    for d in week:
+        render_day_indicator(d)
+
+        # 各日の詳細画面（既存 day_view）へ遷移ボタン
+        if st.button(f"{d.strftime('%m/%d (%a)')} の予約を見る", key=f"btn_{d}"):
+            st.session_state["selected_date"] = d
+            st.session_state["page"] = "day_view"
+            st.experimental_rerun()
+
+    # 戻るボタン
+    if st.button("⬅ カレンダーへ戻る"):
+        st.session_state["page"] = "calendar"
+        st.experimental_rerun()
 elif st.session_state["page"] == "day_view":
+    
     date = st.session_state["selected_date"]
     st.markdown(f"## 🗓️ {date} の利用状況")
 
@@ -464,4 +512,5 @@ elif st.session_state["page"] == "day_view":
         st.experimental_rerun()
 
     st.caption("中央大学生活協同組合　情報通信チーム（v3.4.7 Memory Extension, Fixed）")
+
 
