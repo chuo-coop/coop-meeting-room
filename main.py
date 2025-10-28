@@ -288,47 +288,90 @@ if st.session_state["page"] == "calendar":
     start_of_week = selected - timedelta(days=selected.weekday())
     week_dates = [start_of_week + timedelta(days=i) for i in range(7)]
 
-    # 作成した週データを保存
+    # 週データを保存
     st.session_state["selected_week"] = week_dates
 
     if st.button("この週の予約状況を見る"):
         st.session_state["page"] = "week_view"
         st.experimental_rerun()
 
-
-
 # -------------------------------------------------------------
-# 日別表示
+# 週間表示（閲覧のみ）
 # -------------------------------------------------------------
 elif st.session_state["page"] == "week_view":
     st.title("📅 週間利用状況（閲覧のみ）")
 
-    # 保存されている週データを取得
     week = st.session_state.get("selected_week", [])
     if not week:
         st.warning("⚠️ 週データが見つかりません。カレンダーから再選択してください。")
         st.stop()
-for d in week:
-    weekday_map = ["月", "火", "水", "木", "金", "土", "日"]
-    w = weekday_map[d.weekday()]
-    col_date, col_btn = st.columns([7, 3])
-    with col_date:
-        st.markdown(f"### 📅 {d.strftime('%Y-%m-%d')}（{w}）")
-    with col_btn:
-        st.markdown("<div style='height:6px'></div>", unsafe_allow_html=True)
-        if st.button("🔍 この日の予約を見る", key=f"btn_{d}"):
-            st.session_state["selected_date"] = d
-            st.session_state["page"] = "day_view"
-            st.experimental_rerun()
 
-    render_day_indicator(d)
+    for d in week:
+        weekday_map = ["月", "火", "水", "木", "金", "土", "日"]
+        w = weekday_map[d.weekday()]
+        col_date, col_btn = st.columns([7, 3])
+        with col_date:
+            st.markdown(f"### 📅 {d.strftime('%Y-%m-%d')}（{w}）")
+        with col_btn:
+            st.markdown("<div style='height:6px'></div>", unsafe_allow_html=True)
+            if st.button("🔍 この日の予約を見る", key=f"btn_{d}"):
+                st.session_state["selected_date"] = d
+                st.session_state["page"] = "day_view"
+                st.experimental_rerun()
 
-# ← ループを完全に閉じてから戻るボタン
-st.markdown("---")
-if st.button("⬅ カレンダーへ戻る"):
-    st.session_state["page"] = "calendar"
-    st.experimental_rerun()
+        # 日別インジケータ（前側/奥側）
+        render_day_indicator(d)
 
+        # 週用の簡易インジケータ（空満）
+        st.markdown("### 🏢 会議室 利用状況")
+        for idx, layer in enumerate(["前側", "奥側", "空満"]):
+            label = ["前側", "奥側", "空満"][idx]
+            row = [
+                f"<div style='width:60px;text-align:center;font-weight:600;font-size:14px;border:1px solid #999;background:#f9f9f9;'>{label}</div>"
+            ]
+            for slot in TIME_SLOTS:
+                s0 = parse_time(slot)
+                e0 = (datetime.combine(datetime.today(), s0) + timedelta(minutes=30)).time()
+                color, text = "#ffffff", ""
+                if layer in ["前側", "奥側"]:
+                    active = any(
+                        r["status"] == "active"
+                        and str(r["date"]) == str(d)
+                        and overlap(parse_time(r["start"]), parse_time(r["end"]), s0, e0)
+                        for r in st.session_state["reservations"][layer]
+                    )
+                    color = "#ffcccc" if active else "#ccffcc"
+                    text = f"<span style='font-size:14px;font-weight:500;'>{slot}</span>"
+                else:
+                    # ← ここは d（日付）を使う
+                    front_busy = any(
+                        r["status"] == "active"
+                        and str(r["date"]) == str(d)
+                        and overlap(parse_time(r["start"]), parse_time(r["end"]), s0, e0)
+                        for r in st.session_state["reservations"]["前側"]
+                    )
+                    back_busy = any(
+                        r["status"] == "active"
+                        and str(r["date"]) == str(d)
+                        and overlap(parse_time(r["start"]), parse_time(r["end"]), s0, e0)
+                        for r in st.session_state["reservations"]["奥側"]
+                    )
+                    if front_busy and back_busy:
+                        color = "#ff3333"
+                        text = "<b><span style='color:white;font-size:15px;'>満</span></b>"
+                row.append(
+                    f"<div style='flex:1;background:{color};border:1px solid #aaa;text-align:center;padding:4px;'>{text}</div>"
+                )
+            st.markdown(f"<div style='display:flex;'>{''.join(row)}</div>", unsafe_allow_html=True)
+
+    st.markdown("---")
+    if st.button("⬅ カレンダーへ戻る"):
+        st.session_state["page"] = "calendar"
+        st.experimental_rerun()
+
+# -------------------------------------------------------------
+# 日別表示（詳細）
+# -------------------------------------------------------------
 elif st.session_state["page"] == "day_view":
     date = st.session_state["selected_date"]
     weekday_map = ["月", "火", "水", "木", "金", "土", "日"]
@@ -336,7 +379,7 @@ elif st.session_state["page"] == "day_view":
     st.markdown(f"## 📅 {date}（{w}）の利用状況")
 
     # --- インジケータ（赤：使用中／緑：空き／満：両室占有） ---
-        st.markdown("### 🏢 会議室 利用状況")
+    st.markdown("### 🏢 会議室 利用状況")
     for idx, layer in enumerate(["前側", "奥側", "空満"]):
         label = ["前側", "奥側", "空満"][idx]
         row = [
@@ -349,7 +392,7 @@ elif st.session_state["page"] == "day_view":
             if layer in ["前側", "奥側"]:
                 active = any(
                     r["status"] == "active"
-                    and str(r["date"]) == str(d)
+                    and str(r["date"]) == str(date)
                     and overlap(parse_time(r["start"]), parse_time(r["end"]), s0, e0)
                     for r in st.session_state["reservations"][layer]
                 )
@@ -375,6 +418,8 @@ elif st.session_state["page"] == "day_view":
                 f"<div style='flex:1;background:{color};border:1px solid #aaa;text-align:center;padding:4px;'>{text}</div>"
             )
         st.markdown(f"<div style='display:flex;'>{''.join(row)}</div>", unsafe_allow_html=True)
+
+    # （この下の「一覧表／登録／取消／戻る」ロジックは現行のまま）
 
     # --- 一覧表（全面統合表示） ---
     st.divider()
@@ -531,6 +576,7 @@ elif st.session_state["page"] == "day_view":
         st.experimental_rerun()
 
     st.caption("中央大学生活協同組合　情報通信チーム（v3.4.7 Memory Extension, Fixed）")
+
 
 
 
