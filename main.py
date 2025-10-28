@@ -299,7 +299,7 @@ if st.session_state["page"] == "calendar":
 # 週間表示（閲覧のみ）
 # -------------------------------------------------------------
 elif st.session_state["page"] == "week_view":
-    st.title("📅 週間利用状況（閲覧のみ）")
+    st.title("📅 週間利用状況")
 
     week = st.session_state.get("selected_week", [])
     if not week:
@@ -571,7 +571,8 @@ elif st.session_state["page"] == "day_view":
         st.session_state["page"] = "calendar"
         st.experimental_rerun()
 
-    st.caption("中央大学生活協同組合　情報通信チーム（v3.4.7 Memory Extension, Fixed）")
+    st.caption("中央大学生活協同組合　情報通信チーム（Ver.Oct.2025）")
+
 
 
 
