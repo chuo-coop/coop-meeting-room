@@ -313,7 +313,7 @@ elif st.session_state["page"] == "week_view":
         with col_date:
             st.markdown(f"### 📅 {d.strftime('%Y-%m-%d')}（{w}）")
         with col_btn:
-            st.markdown("<div style='height:6px'></div>", unsafe_allow_html=True)
+            st.markdown("<div style='height:3px'></div>", unsafe_allow_html=True)
             if st.button("🔍 この日の予約を見る", key=f"btn_{d}"):
                 st.session_state["selected_date"] = d
                 st.session_state["page"] = "day_view"
@@ -572,6 +572,7 @@ elif st.session_state["page"] == "day_view":
         st.experimental_rerun()
 
     st.caption("中央大学生活協同組合　情報通信チーム（v3.4.7 Memory Extension, Fixed）")
+
 
 
 
