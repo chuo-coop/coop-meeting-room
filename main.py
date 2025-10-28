@@ -308,29 +308,26 @@ elif st.session_state["page"] == "week_view":
     if not week:
         st.warning("⚠️ 週データが見つかりません。カレンダーから再選択してください。")
         st.stop()
-
 for d in week:
-    # 日本語曜日
     weekday_map = ["月", "火", "水", "木", "金", "土", "日"]
     w = weekday_map[d.weekday()]
-    col_date, col_btn = st.columns([7, 3])  # 比率は必要に応じて 6:4 / 8:2 に調整可
+    col_date, col_btn = st.columns([7, 3])
     with col_date:
         st.markdown(f"### 📅 {d.strftime('%Y-%m-%d')}（{w}）")
     with col_btn:
-        # 上下のズレを抑えるため軽い余白を入れる（必要なら数値を 4〜10 で微調整）
         st.markdown("<div style='height:6px'></div>", unsafe_allow_html=True)
         if st.button("🔍 この日の予約を見る", key=f"btn_{d}"):
             st.session_state["selected_date"] = d
             st.session_state["page"] = "day_view"
             st.experimental_rerun()
 
-    # 日付とボタン行の下にインジケータ
     render_day_indicator(d)
 
-    # ループ終了後に戻るボタンを表示
-    if st.button("⬅ カレンダーへ戻る"):
-        st.session_state["page"] = "calendar"
-        st.experimental_rerun()
+# ← ループを完全に閉じてから戻るボタン
+st.markdown("---")
+if st.button("⬅ カレンダーへ戻る"):
+    st.session_state["page"] = "calendar"
+    st.experimental_rerun()
 
     elif st.session_state["page"] == "day_view":
         date = st.session_state["selected_date"]
@@ -534,6 +531,7 @@ for d in week:
         st.experimental_rerun()
 
     st.caption("中央大学生活協同組合　情報通信チーム（v3.4.7 Memory Extension, Fixed）")
+
 
 
 
