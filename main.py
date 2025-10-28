@@ -300,7 +300,7 @@ elif st.session_state["page"] == "week_view":
     # 保存されている週データを取得
     week = st.session_state.get("selected_week", [])
 
-    for d in week:
+for d in week:
     # 📅 日付とボタンを横並びに
     weekday_map = ["月", "火", "水", "木", "金", "土", "日"]
     w = weekday_map[d.weekday()]
@@ -328,7 +328,7 @@ elif st.session_state["page"] == "week_view":
         st.session_state["page"] = "calendar"
         st.experimental_rerun()
 elif st.session_state["page"] == "day_view":
-    
+  
     date = st.session_state["selected_date"]
     weekday_map = ["月", "火", "水", "木", "金", "土", "日"]
     w = weekday_map[date.weekday()]
@@ -530,6 +530,7 @@ elif st.session_state["page"] == "day_view":
         st.experimental_rerun()
 
     st.caption("中央大学生活協同組合　情報通信チーム（v3.4.7 Memory Extension, Fixed）")
+
 
 
 
