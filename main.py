@@ -316,15 +316,17 @@ for d in week:
             st.session_state["page"] = "day_view"
             st.experimental_rerun()
 
-      render_day_indicator(d)
+    # 🔻 日付・ボタンのすぐ下にインジケータ表示
+    render_day_indicator(d)
 
+# ←ここでループを完全に抜ける（インデントを戻す）
 
-    # 戻るボタン
-    if st.button("⬅ カレンダーへ戻る"):
-        st.session_state["page"] = "calendar"
-        st.experimental_rerun()
+# 戻るボタン
+if st.button("⬅ カレンダーへ戻る"):
+    st.session_state["page"] = "calendar"
+    st.experimental_rerun()
+
 elif st.session_state["page"] == "day_view":
-  
     date = st.session_state["selected_date"]
     weekday_map = ["月", "火", "水", "木", "金", "土", "日"]
     w = weekday_map[date.weekday()]
@@ -526,6 +528,7 @@ elif st.session_state["page"] == "day_view":
         st.experimental_rerun()
 
     st.caption("中央大学生活協同組合　情報通信チーム（v3.4.7 Memory Extension, Fixed）")
+
 
 
 
