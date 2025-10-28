@@ -319,9 +319,6 @@ elif st.session_state["page"] == "week_view":
                 st.session_state["page"] = "day_view"
                 st.experimental_rerun()
 
-        # 日別インジケータ（前側/奥側）
-        render_day_indicator(d)
-
         # 週用の簡易インジケータ（空満）
         st.markdown("### 🏢 会議室 利用状況（週表示）")
         for idx, layer in enumerate(["前側", "奥側", "空満"]):
@@ -576,6 +573,7 @@ elif st.session_state["page"] == "day_view":
         st.experimental_rerun()
 
     st.caption("中央大学生活協同組合　情報通信チーム（v3.4.7 Memory Extension, Fixed）")
+
 
 
 
