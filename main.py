@@ -309,25 +309,16 @@ elif st.session_state["page"] == "week_view":
         st.warning("⚠️ 週データが見つかりません。カレンダーから再選択してください。")
         st.stop()
 
-    # 各日を順に描画
-    for d in week:
-# 📅 日付タイトルとボタンを横並びに配置（同一行）
-        weekday_map = ["月", "火", "水", "木", "金", "土", "日"]
-        w = weekday_map[d.weekday()]
-    for d in week:
-    # 曜日名を取得
-        weekday_map = ["月", "火", "水", "木", "金", "土", "日"]
-        w = weekday_map[d.weekday()]
-
-    # 📅 日付とボタンを同一行に配置
-        col1, col2 = st.columns([7, 2], gap="small")  # 左広く・右狭く
-
-    with col1:
+for d in week:
+    # 日本語曜日
+    weekday_map = ["月", "火", "水", "木", "金", "土", "日"]
+    w = weekday_map[d.weekday()]
+    col_date, col_btn = st.columns([7, 3])  # 比率は必要に応じて 6:4 / 8:2 に調整可
+    with col_date:
         st.markdown(f"### 📅 {d.strftime('%Y-%m-%d')}（{w}）")
-
-    with col2:
-        # ボタンを縦中央寄せに
-        st.markdown("<div style='height:10px'></div>", unsafe_allow_html=True)
+    with col_btn:
+        # 上下のズレを抑えるため軽い余白を入れる（必要なら数値を 4〜10 で微調整）
+        st.markdown("<div style='height:6px'></div>", unsafe_allow_html=True)
         if st.button("🔍 この日の予約を見る", key=f"btn_{d}"):
             st.session_state["selected_date"] = d
             st.session_state["page"] = "day_view"
@@ -543,6 +534,7 @@ elif st.session_state["page"] == "day_view":
         st.experimental_rerun()
 
     st.caption("中央大学生活協同組合　情報通信チーム（v3.4.7 Memory Extension, Fixed）")
+
 
 
 
