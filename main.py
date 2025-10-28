@@ -316,11 +316,7 @@ for d in week:
             st.session_state["page"] = "day_view"
             st.experimental_rerun()
 
-    # 🔻 日付・ボタンのすぐ下にインジケータ表示
-    render_day_indicator(d)
-
-
-    render_day_indicator(d)
+      render_day_indicator(d)
 
 
     # 戻るボタン
@@ -530,6 +526,7 @@ elif st.session_state["page"] == "day_view":
         st.experimental_rerun()
 
     st.caption("中央大学生活協同組合　情報通信チーム（v3.4.7 Memory Extension, Fixed）")
+
 
 
 
