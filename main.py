@@ -315,21 +315,23 @@ elif st.session_state["page"] == "week_view":
         weekday_map = ["月", "火", "水", "木", "金", "土", "日"]
         w = weekday_map[d.weekday()]
     for d in week:
-    # 📅 日付タイトルとボタンを横並びに配置
+    # 曜日名を取得
         weekday_map = ["月", "火", "水", "木", "金", "土", "日"]
         w = weekday_map[d.weekday()]
-        col1, col2 = st.columns([6, 2])  # 左右バランス調整
 
-        with col1:
-            st.markdown(f"### 📅 {d.strftime('%Y-%m-%d')}（{w}）")
+    # 📅 日付とボタンを同一行に配置
+        col1, col2 = st.columns([7, 2], gap="small")  # 左広く・右狭く
 
-        with col2:
-        # ボタンを日付の横位置中央に寄せる
-            st.markdown("<div style='height:10px'></div>", unsafe_allow_html=True)
-            if st.button(f"🔍 この日の予約を見る", key=f"btn_{d}"):
-                st.session_state["selected_date"] = d
-                st.session_state["page"] = "day_view"
-                st.experimental_rerun()
+    with col1:
+        st.markdown(f"### 📅 {d.strftime('%Y-%m-%d')}（{w}）")
+
+    with col2:
+        # ボタンを縦中央寄せに
+        st.markdown("<div style='height:10px'></div>", unsafe_allow_html=True)
+        if st.button("🔍 この日の予約を見る", key=f"btn_{d}"):
+            st.session_state["selected_date"] = d
+            st.session_state["page"] = "day_view"
+            st.experimental_rerun()
 
     # 日付とボタン行の下にインジケータ
     render_day_indicator(d)
@@ -541,6 +543,7 @@ elif st.session_state["page"] == "day_view":
         st.experimental_rerun()
 
     st.caption("中央大学生活協同組合　情報通信チーム（v3.4.7 Memory Extension, Fixed）")
+
 
 
 
