@@ -303,9 +303,10 @@ elif st.session_state["page"] == "week_view":
     # 各日を順にインジケータ表示
     for d in week:
         render_day_indicator(d)
-
         # 各日の詳細画面（既存 day_view）へ遷移ボタン
-        if st.button(f"{d.strftime('%m/%d (%a)')} の予約を見る", key=f"btn_{d}"):
+        weekday_map = ["月", "火", "水", "木", "金", "土", "日"]
+        w = weekday_map[d.weekday()]
+        if st.button(f"{d.strftime('%m/%d')}（{w}）の予約を見る", key=f"btn_{d}"):
             st.session_state["selected_date"] = d
             st.session_state["page"] = "day_view"
             st.experimental_rerun()
@@ -515,6 +516,7 @@ elif st.session_state["page"] == "day_view":
         st.experimental_rerun()
 
     st.caption("中央大学生活協同組合　情報通信チーム（v3.4.7 Memory Extension, Fixed）")
+
 
 
 
