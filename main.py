@@ -352,7 +352,7 @@ for d in week:
             if layer in ["前側", "奥側"]:
                 active = any(
                     r["status"] == "active"
-                    and str(r["date"]) == str(date)
+                    and str(r["date"]) == str(d)
                     and overlap(parse_time(r["start"]), parse_time(r["end"]), s0, e0)
                     for r in st.session_state["reservations"][layer]
                 )
@@ -534,6 +534,7 @@ for d in week:
         st.experimental_rerun()
 
     st.caption("中央大学生活協同組合　情報通信チーム（v3.4.7 Memory Extension, Fixed）")
+
 
 
 
