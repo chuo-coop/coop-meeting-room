@@ -299,14 +299,14 @@ elif st.session_state["page"] == "week_view":
 
     # 保存されている週データを取得
     week = st.session_state.get("selected_week", [])
-if not week:
-    st.warning("⚠️ 週データが見つかりません。カレンダーから再選択してください。")
-    st.stop()
-for d in week:
+    if not week:
+        st.warning("⚠️ 週データが見つかりません。カレンダーから再選択してください。")
+        st.stop()
+    for d in week:
     # 📅 日付とボタンを横並びに
-    weekday_map = ["月", "火", "水", "木", "金", "土", "日"]
-    w = weekday_map[d.weekday()]
-    col1, col2 = st.columns([5, 1])  # 左広く、右にボタンを寄せる
+        weekday_map = ["月", "火", "水", "木", "金", "土", "日"]
+        w = weekday_map[d.weekday()]
+        col1, col2 = st.columns([5, 1])  # 左広く、右にボタンを寄せる
 
     with col1:
         st.markdown(f"### 📅 {d.strftime('%Y-%m-%d')}（{w}）")
@@ -530,6 +530,7 @@ elif st.session_state["page"] == "day_view":
         st.experimental_rerun()
 
     st.caption("中央大学生活協同組合　情報通信チーム（v3.4.7 Memory Extension, Fixed）")
+
 
 
 
