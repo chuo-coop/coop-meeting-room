@@ -332,11 +332,11 @@ for d in week:
         st.session_state["page"] = "calendar"
         st.experimental_rerun()
 
-elif st.session_state["page"] == "day_view":
-    date = st.session_state["selected_date"]
-    weekday_map = ["月", "火", "水", "木", "金", "土", "日"]
-    w = weekday_map[date.weekday()]
-    st.markdown(f"## 📅 {date}（{w}）の利用状況")
+    elif st.session_state["page"] == "day_view":
+        date = st.session_state["selected_date"]
+        weekday_map = ["月", "火", "水", "木", "金", "土", "日"]
+        w = weekday_map[date.weekday()]
+        st.markdown(f"## 📅 {date}（{w}）の利用状況")
 
     # --- インジケータ（赤：使用中／緑：空き／満：両室占有） ---
     st.markdown("### 🏢 会議室 利用状況")
@@ -534,6 +534,7 @@ elif st.session_state["page"] == "day_view":
         st.experimental_rerun()
 
     st.caption("中央大学生活協同組合　情報通信チーム（v3.4.7 Memory Extension, Fixed）")
+
 
 
 
