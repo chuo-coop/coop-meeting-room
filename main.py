@@ -314,28 +314,25 @@ elif st.session_state["page"] == "week_view":
 # 📅 日付タイトルとボタンを横並びに配置（同一行）
         weekday_map = ["月", "火", "水", "木", "金", "土", "日"]
         w = weekday_map[d.weekday()]
+    for d in week:
+    # 📅 日付タイトルとボタンを横並びに配置
+        weekday_map = ["月", "火", "水", "木", "金", "土", "日"]
+        w = weekday_map[d.weekday()]
+        col1, col2 = st.columns([6, 2])  # 左右バランス調整
 
-        # HTMLで日付＋ボタンを1行に整列
-        date_str = d.strftime("%Y-%m-%d")
-        button_key = f"btn_{d}"
+    with col1:
+        st.markdown(f"### 📅 {d.strftime('%Y-%m-%d')}（{w}）")
 
-        html = f"""
-        <div style="display:flex; align-items:center; justify-content:space-between;">
-            <h3 style="margin:0;">📅 {date_str}（{w}）</h3>
-            <form action="#" method="post">
-                <input type="submit" value="🔍 この日の予約を見る" id="{button_key}"
-                style="background-color:#f0f0f0; border:1px solid #ccc; border-radius:6px;
-                       padding:4px 8px; cursor:pointer; font-size:14px;">
-            </form>
-        </div>
-        """
-        st.markdown(html, unsafe_allow_html=True)
-
-        # 実際のStreamlitボタンでページ遷移処理
-        if st.button(f"🔍 この日の予約を見る", key=f"real_{button_key}"):
+    with col2:
+        # ボタンを日付の横位置中央に寄せる
+        st.markdown("<div style='height:10px'></div>", unsafe_allow_html=True)
+        if st.button(f"🔍 この日の予約を見る", key=f"btn_{d}"):
             st.session_state["selected_date"] = d
             st.session_state["page"] = "day_view"
             st.experimental_rerun()
+
+    # 日付とボタン行の下にインジケータ
+    render_day_indicator(d)
 
         # 🔻 日付・ボタンのすぐ下にインジケータ表示
             render_day_indicator(d)
@@ -547,4 +544,5 @@ elif st.session_state["page"] == "day_view":
         st.experimental_rerun()
 
     st.caption("中央大学生活協同組合　情報通信チーム（v3.4.7 Memory Extension, Fixed）")
+
 
