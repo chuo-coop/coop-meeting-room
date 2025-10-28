@@ -334,9 +334,6 @@ elif st.session_state["page"] == "week_view":
     # 日付とボタン行の下にインジケータ
     render_day_indicator(d)
 
-        # 🔻 日付・ボタンのすぐ下にインジケータ表示
-            render_day_indicator(d)
-
     # ループ終了後に戻るボタンを表示
     if st.button("⬅ カレンダーへ戻る"):
         st.session_state["page"] = "calendar"
@@ -544,6 +541,7 @@ elif st.session_state["page"] == "day_view":
         st.experimental_rerun()
 
     st.caption("中央大学生活協同組合　情報通信チーム（v3.4.7 Memory Extension, Fixed）")
+
 
 
 
