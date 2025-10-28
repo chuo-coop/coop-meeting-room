@@ -280,14 +280,21 @@ def render_day_indicator(date):
 # -------------------------------------------------------------
 if st.session_state["page"] == "calendar":
     st.title("📅 会議室カレンダー")
+
     selected = st.date_input("日付を選択", datetime.now().date())
     st.session_state["selected_date"] = selected
+
+    # 選択した日を含む週（月曜〜日曜）を作る
     start_of_week = selected - timedelta(days=selected.weekday())
     week_dates = [start_of_week + timedelta(days=i) for i in range(7)]
+
+    # 作成した週データを保存
+    st.session_state["selected_week"] = week_dates
+
     if st.button("この週の予約状況を見る"):
         st.session_state["page"] = "week_view"
-        st.session_state["selected_week"] = week_dates
         st.experimental_rerun()
+
 
 
 # -------------------------------------------------------------
@@ -529,6 +536,7 @@ elif st.session_state["page"] == "day_view":
         st.experimental_rerun()
 
     st.caption("中央大学生活協同組合　情報通信チーム（v3.4.7 Memory Extension, Fixed）")
+
 
 
 
