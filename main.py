@@ -361,9 +361,29 @@ elif st.session_state["page"] == "week_view":
             st.markdown(f"<div style='display:flex;'>{''.join(row)}</div>", unsafe_allow_html=True)
 
     st.markdown("---")
-    if st.button("⬅ カレンダーへ戻る"):
-        st.session_state["page"] = "calendar"
-        st.experimental_rerun()
+   # --- 週移動ボタン ---
+    col_prev, col_home, col_next = st.columns(3)
+
+    with col_prev:
+        if st.button("⬅ 前週"):
+            week = st.session_state.get("selected_week", [])
+            if week:
+                new_start = week[0] - timedelta(days=7)
+                st.session_state["selected_week"] = [new_start + timedelta(days=i) for i in range(7)]
+                st.experimental_rerun()
+
+    with col_home:
+        if st.button("📅 カレンダーに戻る"):
+            st.session_state["page"] = "calendar"
+            st.experimental_rerun()
+
+    with col_next:
+        if st.button("次週 ➡"):
+            week = st.session_state.get("selected_week", [])
+            if week:
+                new_start = week[0] + timedelta(days=7)
+                st.session_state["selected_week"] = [new_start + timedelta(days=i) for i in range(7)]
+                st.experimental_rerun()
 
 # -------------------------------------------------------------
 # 日別表示（詳細）
@@ -572,6 +592,7 @@ elif st.session_state["page"] == "day_view":
         st.experimental_rerun()
 
     st.caption("中央大学生活協同組合　情報通信チーム（Ver.Oct.2025）")
+
 
 
 
