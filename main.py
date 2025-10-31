@@ -300,7 +300,13 @@ if st.session_state["page"] == "calendar":
 # -------------------------------------------------------------
 elif st.session_state["page"] == "week_view":
     st.title("📅 週間利用状況")
-
+ # --- 🔄 データ再読み込みボタンをここに追加 ---
+    if st.button("🔄 データを再読み込み"):
+        with st.spinner("Google Sheets から最新データを取得中..."):
+            load_reservations_from_gsheet()
+        st.success("✅ 最新データを読み込みました。")
+        st.experimental_rerun()
+    # --- ここまで追加 ---
     week = st.session_state.get("selected_week", [])
     if not week:
         st.warning("⚠️ 週データが見つかりません。カレンダーから再選択してください。")
@@ -592,6 +598,7 @@ elif st.session_state["page"] == "day_view":
         st.experimental_rerun()
 
     st.caption("中央大学生活協同組合　情報通信チーム（Ver.Oct.2025）")
+
 
 
 
