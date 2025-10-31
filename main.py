@@ -298,7 +298,7 @@ if st.session_state["page"] == "calendar":
 # -------------------------------------------------------------
 # 週間表示（閲覧のみ）
 # -------------------------------------------------------------
- elif st.session_state["page"] == "week_view":
+elif st.session_state["page"] == "week_view":
     # --- タイトルと再読み込みボタンを横並び配置 ---
     col_title, col_reload = st.columns([8, 2])
     with col_title:
@@ -600,6 +600,7 @@ elif st.session_state["page"] == "day_view":
         st.experimental_rerun()
 
     st.caption("中央大学生活協同組合　情報通信チーム（Ver.Oct.2025）")
+
 
 
 
