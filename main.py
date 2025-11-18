@@ -599,25 +599,3 @@ elif st.session_state["page"] == "day_view":
 
     st.caption("中央大学生活協同組合　情報通信チーム（Ver.Oct.2025）")
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
